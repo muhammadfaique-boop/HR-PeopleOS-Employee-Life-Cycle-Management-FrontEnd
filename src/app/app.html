@@ -1,0 +1,251 @@
+<main class="shell" [class.is-locked]="!session">
+  <section *ngIf="!session" class="login-screen">
+    <div class="login-panel">
+      <div>
+        <p class="eyebrow">PeopleOS</p>
+        <h1>Hire-to-retire operations, without the maze.</h1>
+        <p class="login-copy">
+          A lifecycle-first HR console for onboarding, employee data, attendance, leave,
+          benefits, documents, policies, probation, and approvals.
+        </p>
+      </div>
+
+      <form class="login-form" (ngSubmit)="login()">
+        <label>
+          Email
+          <input name="email" [(ngModel)]="email" autocomplete="username" />
+        </label>
+        <label>
+          Password
+          <input name="password" type="password" [(ngModel)]="password" autocomplete="current-password" />
+        </label>
+        <button type="submit" [disabled]="loading">{{ loading ? 'Signing in...' : 'Sign in' }}</button>
+        <p class="error" *ngIf="error">{{ error }}</p>
+      </form>
+
+      <div class="demo-strip">
+        <span>Demo users</span>
+        <code>admin@peopleos.dev / Admin&#64;123</code>
+        <code>hr@peopleos.dev / Hr&#64;123</code>
+        <code>employee@peopleos.dev / Employee&#64;123</code>
+      </div>
+    </div>
+  </section>
+
+  <ng-container *ngIf="session && dashboard">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">P</span>
+        <div>
+          <strong>PeopleOS</strong>
+          <small>Lifecycle HR</small>
+        </div>
+      </div>
+
+      <nav>
+        <button [class.active]="activeView === 'overview'" (click)="selectView('overview')">Overview</button>
+        <button [class.active]="activeView === 'people'" (click)="selectView('people')">People</button>
+        <button [class.active]="activeView === 'attendance'" (click)="selectView('attendance')">Attendance</button>
+        <button [class.active]="activeView === 'leave'" (click)="selectView('leave')">Leave</button>
+        <button [class.active]="activeView === 'benefits'" (click)="selectView('benefits')">Benefits</button>
+        <button [class.active]="activeView === 'policies'" (click)="selectView('policies')">Policies</button>
+      </nav>
+
+      <div class="scope-note">
+        <span>Excluded</span>
+        <p>Payroll, tax, travel management, and tickets are outside this build.</p>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Welcome back</p>
+          <h2>{{ session.employee.fullName }}</h2>
+        </div>
+        <div class="user-chip">
+          <span>{{ session.role }}</span>
+          <button type="button" (click)="logout()">Sign out</button>
+        </div>
+      </header>
+
+      <section *ngIf="activeView === 'overview'" class="view">
+        <div class="metric-grid">
+          <article *ngFor="let metric of dashboard.metrics" class="metric" [class]="metric.accent">
+            <span>{{ metric.label }}</span>
+            <strong>{{ metric.value }}</strong>
+          </article>
+        </div>
+
+        <div class="two-column">
+          <section class="panel lifecycle-panel">
+            <div class="panel-head">
+              <h3>Lifecycle Tracker</h3>
+              <span>Hire to retire</span>
+            </div>
+            <article *ngFor="let item of dashboard.lifecycle" class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div>
+                <div class="row-title">
+                  <strong>{{ item.stage }}</strong>
+                  <span>{{ item.status }}</span>
+                </div>
+                <p>{{ item.summary }}</p>
+                <small>{{ item.owner }} owner · Due {{ item.dueDate | date }}</small>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Approval Queue</h3>
+              <span>{{ dashboard.approvals.length }} open</span>
+            </div>
+            <article *ngFor="let item of dashboard.approvals" class="approval">
+              <span>{{ item.type }}</span>
+              <strong>{{ item.subject }}</strong>
+              <small>{{ item.approverRole }} · {{ item.status }} · {{ item.dueDate | date }}</small>
+            </article>
+          </section>
+        </div>
+
+        <section class="panel activity-panel">
+          <div class="panel-head">
+            <h3>Recent Activity</h3>
+            <span>Operational pulse</span>
+          </div>
+          <div class="activity-list">
+            <p *ngFor="let activity of dashboard.recentActivity">{{ activity }}</p>
+          </div>
+        </section>
+      </section>
+
+      <section *ngIf="activeView === 'people'" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Employee Directory</h3>
+            <span>{{ dashboard.employees.length }} profiles</span>
+          </div>
+          <div class="people-grid">
+            <article *ngFor="let person of dashboard.employees" class="person-card">
+              <div class="avatar">{{ person.fullName[0] }}</div>
+              <div>
+                <strong>{{ person.fullName }}</strong>
+                <span>{{ person.position }}</span>
+                <small>{{ person.department }} · {{ person.workLocation }}</small>
+              </div>
+              <div class="completion">
+                <span>{{ person.profileCompletion }}%</span>
+                <div><i [style.width.%]="person.profileCompletion"></i></div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section *ngIf="activeView === 'attendance'" class="view two-column">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Attendance</h3>
+            <span>Device sync</span>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of attendance?.records">
+                <td>{{ item.workDate | date }}</td>
+                <td>{{ item.checkIn || '-' }}</td>
+                <td>{{ item.checkOut || '-' }}</td>
+                <td><span class="status">{{ item.status }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Corrections</h3>
+            <span>Read-only queue</span>
+          </div>
+          <article *ngFor="let item of attendance?.corrections" class="approval">
+            <span>{{ item.workDate | date }}</span>
+            <strong>{{ item.requestedChange }}</strong>
+            <small>{{ item.reason }} · {{ item.status }}</small>
+          </article>
+        </section>
+      </section>
+
+      <section *ngIf="activeView === 'leave'" class="view two-column">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Leave Balances</h3>
+            <span>Employee self-service</span>
+          </div>
+          <article *ngFor="let item of leave?.balances" class="balance-row">
+            <div>
+              <strong>{{ item.leaveType }}</strong>
+              <small>{{ item.availableBalance }} of {{ item.annualEntitlement }} available</small>
+            </div>
+            <div class="completion">
+              <span>{{ item.availableBalance }}</span>
+              <div><i [style.width.%]="(item.availableBalance / item.annualEntitlement) * 100"></i></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Leave Requests</h3>
+            <span>Status tracking</span>
+          </div>
+          <article *ngFor="let item of leave?.requests" class="approval">
+            <span>{{ item.leaveType }}</span>
+            <strong>{{ item.fromDate | date }} to {{ item.toDate | date }}</strong>
+            <small>{{ item.totalDays }} day(s) · {{ item.status }}</small>
+          </article>
+        </section>
+      </section>
+
+      <section *ngIf="activeView === 'benefits'" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Benefits Administration</h3>
+            <span>Clean categories</span>
+          </div>
+          <div class="card-grid">
+            <article *ngFor="let item of benefits" class="mini-card">
+              <span>{{ item.category }}</span>
+              <strong>{{ item.name }}</strong>
+              <p>{{ item.coverage }}</p>
+              <small>{{ item.status }}</small>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section *ngIf="activeView === 'policies'" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Policies and Downloads</h3>
+            <span>Knowledge base</span>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Policy</th><th>Category</th><th>Version</th><th>Published</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of policies">
+                <td>{{ item.title }}</td>
+                <td>{{ item.category }}</td>
+                <td>{{ item.version }}</td>
+                <td>{{ item.publishedOn | date }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+    </section>
+  </ng-container>
+</main>
