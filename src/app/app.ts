@@ -3,7 +3,9 @@ import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, View
 import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { FileReaderService } from './core/services/file-reader.service';
+import { LoginPageComponent } from './features/auth/pages/login-page/login-page.component';
 import { PeopleOsFacade } from './features/peopleos/store/peopleos-facade.service';
+import { AppPasswordField } from './shared/components/ui/app-password-field/app-password-field.component';
 import { PRIMENG_UI_IMPORTS } from './shared/components/ui/primeng-ui.imports';
 import { collectRequiredFieldErrors } from './shared/validators/required-fields.validator';
 import {
@@ -28,7 +30,7 @@ import {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, ReactiveFormsModule, ...PRIMENG_UI_IMPORTS],
+  imports: [CommonModule, ReactiveFormsModule, LoginPageComponent, AppPasswordField, ...PRIMENG_UI_IMPORTS],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -64,23 +66,7 @@ export class App implements OnDestroy {
   readNotificationKeys = new Set<string>();
   profileMenuOpen = false;
   passwordPanelOpen = false;
-  resetPasswordPanelOpen = false;
-  loginPasswordVisible = false;
-  resetPasswordVisible = false;
-  resetConfirmPasswordVisible = false;
-  currentPasswordVisible = false;
-  newPasswordVisible = false;
-  confirmPasswordVisible = false;
   leaveFormVisible = true;
-  readonly loginForm = this.fb.group({
-    email: ['employee@peopleos.dev', Validators.required],
-    password: ['Employee@123', Validators.required]
-  });
-  readonly resetPasswordForm = this.fb.group({
-    email: ['employee@peopleos.dev', Validators.required],
-    newPassword: ['', Validators.required],
-    confirmPassword: ['', Validators.required]
-  });
   readonly passwordForm = this.fb.group({
     currentPassword: ['', Validators.required],
     newPassword: ['', Validators.required],

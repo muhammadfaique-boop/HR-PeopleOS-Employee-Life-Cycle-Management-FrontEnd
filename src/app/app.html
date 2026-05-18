@@ -1,56 +1,7 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 <main class="shell" [class.is-locked]="!session" [class.rtl]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic'" [attr.dir]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic' ? 'rtl' : 'ltr'">
-  <section *ngIf="!session" class="login-screen">
-    <div class="login-panel">
-      <div>
-        <p class="eyebrow">{{ t('appTitle') }}</p>
-        <h1>{{ t('heroTitle') }}</h1>
-        <p class="login-copy">{{ t('heroCopy') }}</p>
-      </div>
-      <form class="login-form" [formGroup]="loginForm" (ngSubmit)="login()">
-        <app-form-field [label]="t('email')"><input pInputText formControlName="email" required /></app-form-field>
-        <app-form-field [label]="t('password')">
-          <div class="password-field">
-            <input pInputText formControlName="password" required [type]="loginPasswordVisible ? 'text' : 'password'" />
-            <button type="button" class="password-toggle" [attr.aria-label]="loginPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('login')">
-              <i [class]="loginPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-            </button>
-          </div>
-        </app-form-field>
-        <button pButton type="submit" [disabled]="loading"><span *ngIf="loading" class="button-spinner"></span>{{ loading ? t('signingIn') : t('signIn') }}</button>
-        <button type="button" class="reset-link" (click)="toggleResetPasswordPanel()">{{ t('resetPassword') }}</button>
-        <div *ngIf="resetPasswordPanelOpen" class="reset-password-form" [formGroup]="resetPasswordForm">
-          <app-form-field [label]="t('email')" [error]="fieldError('resetEmail')"><input pInputText formControlName="email" required /></app-form-field>
-          <app-form-field [label]="t('newPassword')" [error]="fieldError('resetNewPassword')">
-            <div class="password-field">
-              <input pInputText formControlName="newPassword" required [type]="resetPasswordVisible ? 'text' : 'password'" />
-              <button type="button" class="password-toggle" [attr.aria-label]="resetPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('reset')">
-                <i [class]="resetPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-              </button>
-            </div>
-          </app-form-field>
-          <app-form-field [label]="t('confirmPassword')" [error]="fieldError('resetConfirmPassword')">
-            <div class="password-field">
-              <input pInputText formControlName="confirmPassword" required [type]="resetConfirmPasswordVisible ? 'text' : 'password'" />
-              <button type="button" class="password-toggle" [attr.aria-label]="resetConfirmPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('resetConfirm')">
-                <i [class]="resetConfirmPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-              </button>
-            </div>
-          </app-form-field>
-          <button pButton type="button" [disabled]="isBusy('resetPassword')" (click)="resetPassword()"><span *ngIf="isBusy('resetPassword')" class="button-spinner"></span>{{ isBusy('resetPassword') ? t('saving') : t('savePassword') }}</button>
-        </div>
-        <p class="error" *ngIf="error">{{ error }}</p>
-        <p class="success" *ngIf="message">{{ message }}</p>
-      </form>
-      <div class="demo-strip">
-        <span>{{ t('demoUsers') }}</span>
-        <code>admin@peopleos.dev / Admin&#64;123</code>
-        <code>hr@peopleos.dev / Hr&#64;123</code>
-        <code>employee@peopleos.dev / Employee&#64;123</code>
-      </div>
-    </div>
-  </section>
+  <app-login-page *ngIf="!session" (sessionReady)="handleSessionReady($event)"></app-login-page>
 
   <section *ngIf="session && !dashboard" class="workspace-splash">
     <p class="loading-strip"><span class="button-spinner"></span>{{ t('loadingWorkspace') }}</p>

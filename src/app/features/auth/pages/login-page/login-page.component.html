@@ -1,0 +1,42 @@
+<section class="login-screen">
+  <div class="login-panel">
+    <div>
+      <p class="eyebrow">PeopleOS</p>
+      <h1>Hire-to-retire operations, without the maze.</h1>
+      <p class="login-copy">Lifecycle-first HR for onboarding, profile data, attendance, leave, benefits, expenses, resignation, policies, and approvals.</p>
+    </div>
+
+    <form class="login-form" [formGroup]="loginForm" (ngSubmit)="login()">
+      <app-form-field label="Email">
+        <input pInputText formControlName="email" required />
+      </app-form-field>
+      <app-password-field controlName="password" label="Password"></app-password-field>
+
+      <button pButton type="submit" [disabled]="loading">
+        <span *ngIf="loading" class="button-spinner"></span>{{ loading ? 'Signing in...' : 'Sign in' }}
+      </button>
+      <button type="button" class="reset-link" (click)="toggleResetPasswordPanel()">Reset password</button>
+
+      <div *ngIf="resetPasswordPanelOpen" class="reset-password-form" [formGroup]="resetPasswordForm">
+        <app-form-field label="Email">
+          <input pInputText formControlName="email" required />
+        </app-form-field>
+        <app-password-field controlName="newPassword" label="New password"></app-password-field>
+        <app-password-field controlName="confirmPassword" label="Confirm password"></app-password-field>
+        <button pButton type="button" [disabled]="isBusy('resetPassword')" (click)="resetPassword()">
+          <span *ngIf="isBusy('resetPassword')" class="button-spinner"></span>{{ isBusy('resetPassword') ? 'Saving...' : 'Save password' }}
+        </button>
+      </div>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+      <p class="success" *ngIf="message">{{ message }}</p>
+    </form>
+
+    <div class="demo-strip">
+      <span>Demo users</span>
+      <code>admin@peopleos.dev / Admin&#64;123</code>
+      <code>hr@peopleos.dev / Hr&#64;123</code>
+      <code>employee@peopleos.dev / Employee&#64;123</code>
+    </div>
+  </div>
+</section>
