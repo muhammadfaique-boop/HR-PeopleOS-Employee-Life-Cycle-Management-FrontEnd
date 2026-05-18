@@ -1,3 +1,5 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
 <main class="shell" [class.is-locked]="!session" [class.rtl]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic'" [attr.dir]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic' ? 'rtl' : 'ltr'">
   <section *ngIf="!session" class="login-screen">
     <div class="login-panel">
@@ -9,7 +11,7 @@
       <form class="login-form" (ngSubmit)="login()">
         <label>{{ t('email') }} <input name="email" required [(ngModel)]="email" /></label>
         <label>{{ t('password') }} <input name="password" required type="password" [(ngModel)]="password" /></label>
-        <button type="submit" [disabled]="loading"><span *ngIf="loading" class="button-spinner"></span>{{ loading ? t('signingIn') : t('signIn') }}</button>
+        <button pButton type="submit" [disabled]="loading"><span *ngIf="loading" class="button-spinner"></span>{{ loading ? t('signingIn') : t('signIn') }}</button>
         <p class="error" *ngIf="error">{{ error }}</p>
       </form>
       <div class="demo-strip">
@@ -32,15 +34,15 @@
         <div><strong>{{ t('appTitle') }}</strong><small>{{ t('appSubtitle') }}</small></div>
       </div>
       <nav>
-        <button [class.active]="activeView === 'overview'" (click)="selectView('overview')">{{ t('dashboard') }}</button>
-        <button [class.active]="activeView === 'people'" (click)="selectView('people')">{{ t('employeeData') }}</button>
-        <button [class.active]="activeView === 'attendance'" (click)="selectView('attendance')">{{ t('attendance') }}</button>
-        <button [class.active]="activeView === 'leave'" (click)="selectView('leave')">{{ t('leaves') }}</button>
-        <button [class.active]="activeView === 'benefits'" (click)="selectView('benefits')">{{ t('benefits') }}</button>
-        <button [class.active]="activeView === 'expense'" (click)="selectView('expense')">{{ t('expense') }}</button>
-        <button [class.active]="activeView === 'resignation'" (click)="selectView('resignation')">{{ t('resignation') }}</button>
-        <button [class.active]="activeView === 'profile'" (click)="selectView('profile')">{{ t('profile') }}</button>
-        <button [class.active]="activeView === 'policies'" (click)="selectView('policies')">{{ t('policies') }}</button>
+        <button pButton [class.active]="activeView === 'overview'" (click)="selectView('overview')">{{ t('dashboard') }}</button>
+        <button pButton [class.active]="activeView === 'people'" (click)="selectView('people')">{{ t('employeeData') }}</button>
+        <button pButton [class.active]="activeView === 'attendance'" (click)="selectView('attendance')">{{ t('attendance') }}</button>
+        <button pButton [class.active]="activeView === 'leave'" (click)="selectView('leave')">{{ t('leaves') }}</button>
+        <button pButton [class.active]="activeView === 'benefits'" (click)="selectView('benefits')">{{ t('benefits') }}</button>
+        <button pButton [class.active]="activeView === 'expense'" (click)="selectView('expense')">{{ t('expense') }}</button>
+        <button pButton [class.active]="activeView === 'resignation'" (click)="selectView('resignation')">{{ t('resignation') }}</button>
+        <button pButton [class.active]="activeView === 'profile'" (click)="selectView('profile')">{{ t('profile') }}</button>
+        <button pButton [class.active]="activeView === 'policies'" (click)="selectView('policies')">{{ t('policies') }}</button>
       </nav>
       <div class="scope-note"><span>{{ t('excluded') }}</span><p>{{ t('excludedCopy') }}</p></div>
     </aside>

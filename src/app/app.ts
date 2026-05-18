@@ -1,18 +1,41 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, OnDestroy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize } from 'rxjs';
+import { FileReaderService } from './core/services/file-reader.service';
+import { PeopleOsFacade } from './features/peopleos/store/peopleos-facade.service';
+import { PRIMENG_UI_IMPORTS } from './shared/components/ui/primeng-ui.imports';
+import { collectRequiredFieldErrors } from './shared/validators/required-fields.validator';
+import {
+  AttendanceCorrectionFormModel,
+  AttendanceData,
+  BenefitPlan,
+  Dashboard,
+  Employee,
+  ExpenseClaim,
+  ExpenseFormModel,
+  LeaveData,
+  LeaveFormModel,
+  NotificationItem,
+  NotificationTone,
+  PasswordFormModel,
+  PolicyDocument,
+  ResignationFormModel,
+  ResignationRequest,
+  Session,
+  SupportedLanguage,
+  ViewKey
+} from './shared/models/peopleos.models';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...PRIMENG_UI_IMPORTS],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnDestroy {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:5265/api';
+  private readonly peopleOs = inject(PeopleOsFacade);
+  private readonly fileReader = inject(FileReaderService);
   private readonly inactivityLimitMs = 20 * 60 * 1000;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -39,12 +62,12 @@ export class App implements OnDestroy {
   passwordPanelOpen = false;
   selectedLanguage = 'English';
   profileImageUrl = '';
-  passwordForm = {
+  passwordForm: PasswordFormModel = {
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   };
-  leaveForm = {
+  leaveForm: LeaveFormModel = {
     employeeId: 2,
     leaveType: 'Casual Leave',
     fromDate: '',
@@ -54,13 +77,13 @@ export class App implements OnDestroy {
     attachmentFileName: '',
     attachmentDataUrl: ''
   };
-  correctionForm = {
+  correctionForm: AttendanceCorrectionFormModel = {
     employeeId: 2,
     workDate: '',
     requestedChange: '',
     reason: ''
   };
-  expenseForm = {
+  expenseForm: ExpenseFormModel = {
     employeeId: 2,
     claimType: 'Medical Expense OPD',
     category: 'Medical OPD',
@@ -70,7 +93,7 @@ export class App implements OnDestroy {
     receiptFileName: '',
     receiptDataUrl: ''
   };
-  resignationForm = {
+  resignationForm: ResignationFormModel = {
     employeeId: 2,
     lastWorkingDate: '',
     reason: ''
@@ -103,7 +126,7 @@ export class App implements OnDestroy {
     this.loading = true;
     this.error = '';
 
-    this.http.post<Session>(`${this.apiUrl}/auth/login`, {
+    this.peopleOs.login({
       email: this.email,
       password: this.password
     }).subscribe({
@@ -182,26 +205,35 @@ export class App implements OnDestroy {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.profileImageUrl = String(reader.result);
+    this.fileReader.readAttachment(event).subscribe(attachment => {
+      if (!attachment) {
+        return;
+      }
+
+      this.profileImageUrl = attachment.dataUrl;
       this.updateProfile();
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
+    });
   }
 
   attachLeaveFile(event: Event) {
-    this.readSelectedFile(event, (fileName, dataUrl) => {
-      this.leaveForm.attachmentFileName = fileName;
-      this.leaveForm.attachmentDataUrl = dataUrl;
+    this.fileReader.readAttachment(event).subscribe(attachment => {
+      if (!attachment) {
+        return;
+      }
+
+      this.leaveForm.attachmentFileName = attachment.fileName;
+      this.leaveForm.attachmentDataUrl = attachment.dataUrl;
     });
   }
 
   attachExpenseReceipt(event: Event) {
-    this.readSelectedFile(event, (fileName, dataUrl) => {
-      this.expenseForm.receiptFileName = fileName;
-      this.expenseForm.receiptDataUrl = dataUrl;
+    this.fileReader.readAttachment(event).subscribe(attachment => {
+      if (!attachment) {
+        return;
+      }
+
+      this.expenseForm.receiptFileName = attachment.fileName;
+      this.expenseForm.receiptDataUrl = attachment.dataUrl;
     });
   }
 
@@ -225,7 +257,7 @@ export class App implements OnDestroy {
     }
 
     this.formBusy = 'password';
-    this.http.post(`${this.apiUrl}/auth/change-password`, {
+    this.peopleOs.changePassword({
       email: this.session.email,
       currentPassword: this.passwordForm.currentPassword,
       newPassword: this.passwordForm.newPassword
@@ -279,7 +311,7 @@ export class App implements OnDestroy {
     }
 
     this.formBusy = 'leave';
-    this.http.post<LeaveRequest>(`${this.apiUrl}/peopleos/leave/requests`, this.leaveForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitLeave(this.leaveForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.leave?.requests.unshift(item);
       this.message = this.t('leaveSubmitted');
       this.loadWorkspace();
@@ -297,7 +329,7 @@ export class App implements OnDestroy {
     }
 
     this.formBusy = 'correction';
-    this.http.post<AttendanceCorrection>(`${this.apiUrl}/peopleos/attendance/corrections`, this.correctionForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitCorrection(this.correctionForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.attendance?.corrections.unshift(item);
       this.message = this.t('correctionSubmitted');
       this.loadWorkspace();
@@ -315,7 +347,7 @@ export class App implements OnDestroy {
     }
 
     this.formBusy = 'expense';
-    this.http.post<ExpenseClaim>(`${this.apiUrl}/peopleos/expense/claims`, this.expenseForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitExpense(this.expenseForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.expenseClaims.unshift(item);
       this.message = this.t('expenseSubmitted');
       this.loadWorkspace();
@@ -332,7 +364,7 @@ export class App implements OnDestroy {
     }
 
     this.formBusy = 'resignation';
-    this.http.post<ResignationRequest>(`${this.apiUrl}/peopleos/resignations`, this.resignationForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitResignation(this.resignationForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.resignations.unshift(item);
       this.message = this.t('resignationSubmitted');
       this.loadWorkspace();
@@ -352,7 +384,7 @@ export class App implements OnDestroy {
     }
 
     this.formBusy = 'profile';
-    this.http.patch<Employee>(`${this.apiUrl}/peopleos/employees/${this.session.employee.id}/profile`, {
+    this.peopleOs.updateProfile(this.session.employee.id, {
       preferredLanguage: this.selectedLanguage,
       profileImageUrl: this.profileImageUrl
     }).pipe(finalize(() => this.formBusy = '')).subscribe(employee => {
@@ -363,41 +395,12 @@ export class App implements OnDestroy {
   }
 
   downloadAttendance(format: 'excel' | 'pdf') {
-    const employeeId = this.session?.employee.id ?? 2;
-    const extension = format === 'pdf' ? 'pdf' : 'csv';
-    const fallbackName = `Login_UserId_${employeeId}.Attendance log.${extension}`;
-
-    this.http.get(`${this.apiUrl}/peopleos/attendance/download/${format}?employeeId=${employeeId}`, {
-      observe: 'response',
-      responseType: 'blob'
-    }).subscribe(response => {
-      const blob = response.body;
-      if (!blob) {
-        return;
-      }
-
-      const contentDisposition = response.headers.get('content-disposition') ?? '';
-      const fileName = this.fileNameFromDisposition(contentDisposition) || fallbackName;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      link.click();
-      URL.revokeObjectURL(url);
-    });
+    this.peopleOs.downloadAttendance(format, this.session?.employee.id ?? 2);
   }
 
   private loadWorkspace() {
     this.workspaceLoading = true;
-    forkJoin({
-      dashboard: this.http.get<Dashboard>(`${this.apiUrl}/peopleos/dashboard`),
-      attendance: this.http.get<AttendanceData>(`${this.apiUrl}/peopleos/attendance`),
-      leave: this.http.get<LeaveData>(`${this.apiUrl}/peopleos/leave`),
-      benefits: this.http.get<BenefitPlan[]>(`${this.apiUrl}/peopleos/benefits`),
-      policies: this.http.get<PolicyDocument[]>(`${this.apiUrl}/peopleos/policies`),
-      expenseClaims: this.http.get<ExpenseClaim[]>(`${this.apiUrl}/peopleos/expense`),
-      resignations: this.http.get<ResignationRequest[]>(`${this.apiUrl}/peopleos/resignations`)
-    }).pipe(finalize(() => {
+    this.peopleOs.loadWorkspace().pipe(finalize(() => {
       this.loading = false;
       this.workspaceLoading = false;
     })).subscribe(data => {
@@ -435,11 +438,10 @@ export class App implements OnDestroy {
   }
 
   private requireFields(fields: Array<[string, string | number | null | undefined]>): boolean {
-    for (const [field, value] of fields) {
-      if (value === null || value === undefined || String(value).trim() === '') {
-        this.validationErrors[field] = this.t('requiredField');
-      }
-    }
+    this.validationErrors = {
+      ...this.validationErrors,
+      ...collectRequiredFieldErrors(fields, this.t('requiredField'))
+    };
 
     return Object.keys(this.validationErrors).length === 0;
   }
@@ -455,220 +457,7 @@ export class App implements OnDestroy {
     this.logout();
     this.error = this.t('sessionExpired');
   }
-
-  private readSelectedFile(event: Event, onRead: (fileName: string, dataUrl: string) => void) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => onRead(file.name, String(reader.result));
-    reader.readAsDataURL(file);
-    input.value = '';
-  }
-
-  private fileNameFromDisposition(contentDisposition: string): string {
-    const match = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(contentDisposition);
-    return decodeURIComponent(match?.[1] || match?.[2] || '');
-  }
 }
-
-type ViewKey = 'overview' | 'people' | 'attendance' | 'leave' | 'benefits' | 'expense' | 'resignation' | 'profile' | 'policies';
-
-interface Session {
-  token: string;
-  email: string;
-  role: string;
-  employee: Employee;
-}
-
-interface Dashboard {
-  metrics: Metric[];
-  activeEmployee: Employee;
-  employees: Employee[];
-  lifecycle: LifecycleStage[];
-  approvals: ApprovalTask[];
-  whoIsOut: WhoIsOut[];
-  holidays: Holiday[];
-  announcements: Announcement[];
-  quickActions: QuickAction[];
-  lifecycleSignals: LifecycleSignal[];
-  recentActivity: string[];
-}
-
-interface Metric {
-  label: string;
-  value: string;
-  accent: string;
-}
-
-interface WhoIsOut {
-  employeeName: string;
-  leaveType: string;
-  fromDate: string;
-  toDate: string;
-  department: string;
-}
-
-interface Holiday {
-  name: string;
-  date: string;
-  type: string;
-}
-
-interface Announcement {
-  title: string;
-  body: string;
-  publishedOn: string;
-  audience: string;
-}
-
-interface QuickAction {
-  label: string;
-  target: string;
-}
-
-interface LifecycleSignal {
-  label: string;
-  value: string;
-  status: string;
-}
-
-interface Employee {
-  id: number;
-  employeeCode: string;
-  fullName: string;
-  email: string;
-  department: string;
-  position: string;
-  manager: string;
-  lifecycleStatus: string;
-  joiningDate: string;
-  profileCompletion: number;
-  workLocation: string;
-  preferredLanguage: string;
-  profileImageUrl: string;
-}
-
-interface LifecycleStage {
-  id: number;
-  employeeId: number;
-  stage: string;
-  owner: string;
-  status: string;
-  dueDate: string;
-  summary: string;
-}
-
-interface ApprovalTask {
-  id: number;
-  type: string;
-  subject: string;
-  requester: string;
-  approverRole: string;
-  status: string;
-  dueDate: string;
-}
-
-interface AttendanceData {
-  records: AttendanceRecord[];
-  corrections: AttendanceCorrection[];
-}
-
-interface AttendanceRecord {
-  id: number;
-  workDate: string;
-  checkIn: string | null;
-  checkOut: string | null;
-  status: string;
-  source: string;
-}
-
-interface AttendanceCorrection {
-  id: number;
-  workDate: string;
-  requestedChange: string;
-  reason: string;
-  status: string;
-  approver: string;
-}
-
-interface LeaveData {
-  balances: LeaveBalance[];
-  requests: LeaveRequest[];
-}
-
-interface LeaveBalance {
-  id: number;
-  leaveType: string;
-  annualEntitlement: number;
-  availableBalance: number;
-}
-
-interface LeaveRequest {
-  id: number;
-  leaveType: string;
-  fromDate: string;
-  toDate: string;
-  totalDays: number;
-  reason: string;
-  contactDuringLeave: string;
-  attachmentFileName: string;
-  attachmentDataUrl: string;
-  status: string;
-}
-
-interface BenefitPlan {
-  id: number;
-  name: string;
-  category: string;
-  coverage: string;
-  status: string;
-  description: string;
-}
-
-interface PolicyDocument {
-  id: number;
-  title: string;
-  category: string;
-  version: string;
-  publishedOn: string;
-}
-
-interface ExpenseClaim {
-  id: number;
-  claimType: string;
-  category: string;
-  amount: number;
-  expenseDate: string;
-  description: string;
-  receiptFileName: string;
-  receiptDataUrl: string;
-  status: string;
-  lineManager: string;
-}
-
-interface ResignationRequest {
-  id: number;
-  resignationDate: string;
-  lastWorkingDate: string;
-  reason: string;
-  status: string;
-  lineManager: string;
-}
-
-type NotificationTone = 'urgent' | 'info';
-
-interface NotificationItem {
-  key: string;
-  title: string;
-  body: string;
-  tone: NotificationTone;
-}
-
-type SupportedLanguage = 'English' | 'Urdu' | 'Arabic' | 'French';
 type TranslationKey = keyof typeof translations.English;
 
 const translations = {
