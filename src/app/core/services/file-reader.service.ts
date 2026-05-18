@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { FileAttachmentDto } from '../models/file-attachment.dto';
+import { FileAttachmentDto } from '../../shared/models/file-attachment.dto';
 
 @Injectable({ providedIn: 'root' })
 export class FileReaderService {
