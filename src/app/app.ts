@@ -465,7 +465,7 @@ export class App implements OnDestroy {
     }).pipe(finalize(() => this.formBusy = '')).subscribe(employee => {
       this.session = { ...this.session!, employee };
       this.profileForm.patchValue({
-        preferredLanguage: employee.preferredLanguage || 'English',
+        preferredLanguage: this.toSupportedLanguage(employee.preferredLanguage),
         profileImageUrl: employee.profileImageUrl || ''
       });
       this.message = this.t('profileUpdated');
@@ -564,7 +564,7 @@ export class App implements OnDestroy {
     this.resetExpenseForm(employeeId);
     this.resetResignationForm(employeeId);
     this.profileForm.reset({
-      preferredLanguage: session?.employee.preferredLanguage || 'English',
+      preferredLanguage: this.toSupportedLanguage(session?.employee.preferredLanguage),
       profileImageUrl: session?.employee.profileImageUrl || ''
     });
   }
@@ -610,6 +610,12 @@ export class App implements OnDestroy {
       lastWorkingDate: '',
       reason: ''
     });
+  }
+
+  private toSupportedLanguage(value: string | null | undefined): SupportedLanguage {
+    return this.languageOptions.includes(value as SupportedLanguage)
+      ? value as SupportedLanguage
+      : 'English';
   }
 
   private scopeRank(scope: PermissionScope): number {
