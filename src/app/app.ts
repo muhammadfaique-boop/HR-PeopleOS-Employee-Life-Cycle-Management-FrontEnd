@@ -40,6 +40,7 @@ export class App implements OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly inactivityLimitMs = 20 * 60 * 1000;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+  private messageTimer: ReturnType<typeof setTimeout> | null = null;
 
   error = '';
   loading = false;
@@ -141,6 +142,7 @@ export class App implements OnDestroy {
 
   ngOnDestroy() {
     this.clearInactivityTimer();
+    this.clearMessageTimer();
   }
 
   login() {
@@ -186,17 +188,18 @@ export class App implements OnDestroy {
     this.notificationsOpen = false;
     this.readNotificationKeys.clear();
     this.validationErrors = {};
-    this.message = '';
+    this.clearMessage();
     this.resetSessionDrafts();
     this.clearInactivityTimer();
   }
 
   selectView(view: ViewKey) {
     if (!this.canOpenView(view)) {
-      this.message = this.t('permissionDenied');
+      this.showMessage(this.t('permissionDenied'));
       return;
     }
 
+    this.clearMessage();
     this.activeView = view;
     this.notificationsOpen = false;
     this.profileMenuOpen = false;
@@ -300,7 +303,7 @@ export class App implements OnDestroy {
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      this.message = this.t('passwordMismatch');
+      this.showMessage(this.t('passwordMismatch'));
       return;
     }
 
@@ -313,10 +316,10 @@ export class App implements OnDestroy {
       next: () => {
         this.passwordForm.reset();
         this.passwordPanelOpen = false;
-        this.message = this.t('passwordChanged');
+        this.showMessage(this.t('passwordChanged'));
       },
       error: () => {
-        this.message = this.t('passwordChangeFailed');
+        this.showMessage(this.t('passwordChangeFailed'));
       }
     });
   }
@@ -359,11 +362,11 @@ export class App implements OnDestroy {
     })).subscribe({
       next: updated => {
         this.applyApprovalDecision(updated || { ...item, status: decision });
-        this.message = decision === 'Approved' ? this.t('approvalApproved') : this.t('approvalRejected');
+        this.showMessage(decision === 'Approved' ? this.t('approvalApproved') : this.t('approvalRejected'));
         this.loadWorkspace();
       },
       error: () => {
-        this.message = this.t('approvalFailed');
+        this.showMessage(this.t('approvalFailed'));
       }
     });
   }
@@ -397,7 +400,7 @@ export class App implements OnDestroy {
 
   submitLeave() {
     if (!this.hasPermission('leave.create')) {
-      this.message = this.t('permissionDenied');
+      this.showMessage(this.t('permissionDenied'));
       return;
     }
 
@@ -415,7 +418,7 @@ export class App implements OnDestroy {
     this.formBusy = 'leave';
     this.peopleOs.submitLeave(leaveForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.leave?.requests.unshift(item);
-      this.message = this.t('leaveSubmitted');
+      this.showMessage(this.t('leaveSubmitted'));
       this.resetLeaveForm(this.session?.employee.id ?? 2, true);
       this.loadWorkspace();
     });
@@ -423,7 +426,7 @@ export class App implements OnDestroy {
 
   submitCorrection() {
     if (!this.hasPermission('attendance.correct')) {
-      this.message = this.t('permissionDenied');
+      this.showMessage(this.t('permissionDenied'));
       return;
     }
 
@@ -440,7 +443,7 @@ export class App implements OnDestroy {
     this.formBusy = 'correction';
     this.peopleOs.submitCorrection(correctionForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.attendance?.corrections.unshift(item);
-      this.message = this.t('correctionSubmitted');
+      this.showMessage(this.t('correctionSubmitted'));
       this.resetCorrectionForm();
       this.loadWorkspace();
     });
@@ -448,7 +451,7 @@ export class App implements OnDestroy {
 
   submitExpense() {
     if (!this.hasPermission('expense.create')) {
-      this.message = this.t('permissionDenied');
+      this.showMessage(this.t('permissionDenied'));
       return;
     }
 
@@ -465,7 +468,7 @@ export class App implements OnDestroy {
     this.formBusy = 'expense';
     this.peopleOs.submitExpense(expenseForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.expenseClaims.unshift(item);
-      this.message = this.t('expenseSubmitted');
+      this.showMessage(this.t('expenseSubmitted'));
       this.resetExpenseForm();
       this.loadWorkspace();
     });
@@ -473,7 +476,7 @@ export class App implements OnDestroy {
 
   submitResignation() {
     if (!this.hasPermission('resignation.create')) {
-      this.message = this.t('permissionDenied');
+      this.showMessage(this.t('permissionDenied'));
       return;
     }
 
@@ -489,7 +492,7 @@ export class App implements OnDestroy {
     this.formBusy = 'resignation';
     this.peopleOs.submitResignation(resignationForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.resignations.unshift(item);
-      this.message = this.t('resignationSubmitted');
+      this.showMessage(this.t('resignationSubmitted'));
       this.resetResignationForm();
       this.loadWorkspace();
     });
@@ -501,7 +504,7 @@ export class App implements OnDestroy {
     }
 
     if (!this.hasPermission('employee.update')) {
-      this.message = this.t('permissionDenied');
+      this.showMessage(this.t('permissionDenied'));
       return;
     }
 
@@ -523,14 +526,14 @@ export class App implements OnDestroy {
         preferredLanguage: this.toSupportedLanguage(employee.preferredLanguage),
         profileImageUrl: employee.profileImageUrl || ''
       });
-      this.message = this.t('profileUpdated');
+      this.showMessage(this.t('profileUpdated'));
       this.profileMenuOpen = false;
     });
   }
 
   downloadAttendance(format: 'excel' | 'pdf') {
     if (!this.hasPermission('attendance.read')) {
-      this.message = this.t('permissionDenied');
+      this.showMessage(this.t('permissionDenied'));
       return;
     }
 
@@ -608,6 +611,24 @@ export class App implements OnDestroy {
     };
 
     return Object.keys(this.validationErrors).length === 0;
+  }
+
+  private showMessage(message: string) {
+    this.message = message;
+    this.clearMessageTimer();
+    this.messageTimer = setTimeout(() => this.clearMessage(), 5000);
+  }
+
+  private clearMessage() {
+    this.message = '';
+    this.clearMessageTimer();
+  }
+
+  private clearMessageTimer() {
+    if (this.messageTimer) {
+      clearTimeout(this.messageTimer);
+      this.messageTimer = null;
+    }
   }
 
   private resetSessionDrafts(session?: Session) {
