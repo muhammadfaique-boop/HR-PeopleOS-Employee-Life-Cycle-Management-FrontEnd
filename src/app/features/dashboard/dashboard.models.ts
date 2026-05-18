@@ -1,5 +1,5 @@
-import { ApprovalTask } from '../../approvals/models/approval.models';
-import { Employee, LifecycleStage } from '../../people/models/people.models';
+import { ApprovalTask } from '../approvals/approval.models';
+import { Employee, LifecycleStage } from '../people/people.models';
 
 export type ViewKey = 'overview' | 'people' | 'attendance' | 'leave' | 'benefits' | 'expense' | 'resignation' | 'profile' | 'policies';
 
