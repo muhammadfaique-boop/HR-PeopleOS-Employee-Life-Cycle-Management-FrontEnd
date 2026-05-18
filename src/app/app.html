@@ -97,6 +97,49 @@
         <div class="metric-grid">
           <article *ngFor="let metric of dashboard.metrics" class="metric" [class]="metric.accent"><span>{{ translateText(metric.label) }}</span><strong>{{ metric.value }}</strong></article>
         </div>
+        <section class="panel hr-hub">
+          <div class="panel-head"><h3>{{ t('hrHub') }}</h3><span>{{ t('quickActions') }}</span></div>
+          <div class="quick-action-grid">
+            <button *ngFor="let action of dashboard.quickActions" type="button" (click)="openQuickAction(action.target)">
+              {{ quickActionLabel(action.target) }}
+            </button>
+          </div>
+          <div class="hub-grid">
+            <section>
+              <h4>{{ t('whoIsOut') }}</h4>
+              <article *ngFor="let item of dashboard.whoIsOut" class="hub-item">
+                <strong>{{ item.employeeName }}</strong>
+                <span>{{ translateText(item.leaveType) }} - {{ item.fromDate | date }} to {{ item.toDate | date }}</span>
+                <small>{{ item.department }}</small>
+              </article>
+              <p *ngIf="!dashboard.whoIsOut.length" class="empty-state">{{ t('noOneOut') }}</p>
+            </section>
+            <section>
+              <h4>{{ t('holidays') }}</h4>
+              <article *ngFor="let item of dashboard.holidays" class="hub-item">
+                <strong>{{ translateText(item.name) }}</strong>
+                <span>{{ item.date | date }}</span>
+                <small>{{ translateText(item.type) }}</small>
+              </article>
+            </section>
+            <section>
+              <h4>{{ t('announcements') }}</h4>
+              <article *ngFor="let item of dashboard.announcements" class="hub-item">
+                <strong>{{ translateText(item.title) }}</strong>
+                <span>{{ translateText(item.body) }}</span>
+                <small>{{ t('audience') }}: {{ translateText(item.audience) }}</small>
+              </article>
+            </section>
+            <section>
+              <h4>{{ t('lifecycleSignals') }}</h4>
+              <article *ngFor="let item of dashboard.lifecycleSignals" class="hub-item signal">
+                <strong>{{ item.value }}</strong>
+                <span>{{ translateText(item.label) }}</span>
+                <small>{{ translateText(item.status) }}</small>
+              </article>
+            </section>
+          </div>
+        </section>
         <div class="two-column">
           <section class="panel">
             <div class="panel-head"><h3>{{ t('lifecycleTracker') }}</h3><span>{{ t('hireToRetire') }}</span></div>

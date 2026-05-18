@@ -614,6 +614,79 @@ h2 {
 .metric.violet { border-top-color: #6c5ce7; }
 .metric.rose { border-top-color: #d86f45; }
 
+.hr-hub {
+  display: grid;
+  gap: 16px;
+}
+
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-action-grid button {
+  background: #17211d;
+  color: #fff;
+  padding: 13px 12px;
+  min-height: 46px;
+}
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.hub-grid section {
+  border: 1px solid #eadfce;
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 14px;
+  min-width: 0;
+}
+
+.hub-grid h4 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.hub-item {
+  display: grid;
+  gap: 5px;
+  padding: 10px 0;
+  border-top: 1px solid #f0e5d6;
+}
+
+.hub-item:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.hub-item span,
+.hub-item small {
+  overflow-wrap: anywhere;
+}
+
+.hub-item.signal {
+  grid-template-columns: 44px 1fr;
+  align-items: start;
+}
+
+.hub-item.signal strong {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e8f3ef;
+  color: #00645f;
+}
+
+.hub-item.signal small {
+  grid-column: 2;
+}
+
 .two-column {
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
@@ -868,6 +941,8 @@ th {
   .login-panel,
   .two-column,
   .metric-grid,
+  .quick-action-grid,
+  .hub-grid,
   .activity-list,
   .people-grid,
   .card-grid {

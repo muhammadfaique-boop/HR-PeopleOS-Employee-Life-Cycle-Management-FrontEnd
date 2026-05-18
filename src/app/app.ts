@@ -136,6 +136,24 @@ export class App implements OnDestroy {
     this.profileMenuOpen = false;
   }
 
+  openQuickAction(target: string) {
+    const allowedViews: ViewKey[] = ['overview', 'people', 'attendance', 'leave', 'benefits', 'expense', 'resignation', 'profile', 'policies'];
+    if (allowedViews.includes(target as ViewKey)) {
+      this.selectView(target as ViewKey);
+    }
+  }
+
+  quickActionLabel(target: string): string {
+    const labels: Record<string, TranslationKey> = {
+      leave: 'applyLeave',
+      attendance: 'submitCorrection',
+      expense: 'submitClaim',
+      policies: 'policiesDownloads'
+    };
+
+    return labels[target] ? this.t(labels[target]) : target;
+  }
+
   toggleNotifications() {
     this.notificationsOpen = !this.notificationsOpen;
     this.profileMenuOpen = false;
@@ -395,7 +413,7 @@ export class App implements OnDestroy {
 
   t(key: TranslationKey): string {
     const language = this.selectedLanguage as SupportedLanguage;
-    return translations[language]?.[key] ?? translations.English[key] ?? key;
+    return (translations[language] as Partial<Record<TranslationKey, string>>)?.[key] ?? translations.English[key] ?? key;
   }
 
   translateText(value: string | number | null | undefined): string {
@@ -472,6 +490,11 @@ interface Dashboard {
   employees: Employee[];
   lifecycle: LifecycleStage[];
   approvals: ApprovalTask[];
+  whoIsOut: WhoIsOut[];
+  holidays: Holiday[];
+  announcements: Announcement[];
+  quickActions: QuickAction[];
+  lifecycleSignals: LifecycleSignal[];
   recentActivity: string[];
 }
 
@@ -479,6 +502,38 @@ interface Metric {
   label: string;
   value: string;
   accent: string;
+}
+
+interface WhoIsOut {
+  employeeName: string;
+  leaveType: string;
+  fromDate: string;
+  toDate: string;
+  department: string;
+}
+
+interface Holiday {
+  name: string;
+  date: string;
+  type: string;
+}
+
+interface Announcement {
+  title: string;
+  body: string;
+  publishedOn: string;
+  audience: string;
+}
+
+interface QuickAction {
+  label: string;
+  target: string;
+}
+
+interface LifecycleSignal {
+  label: string;
+  value: string;
+  status: string;
 }
 
 interface Employee {
@@ -645,6 +700,14 @@ const translations = {
     markRead: 'Mark read',
     approvalRequired: 'Approval required',
     recentActivity: 'Recent activity',
+    hrHub: 'HR Hub',
+    quickActions: 'Quick Actions',
+    whoIsOut: "Who's Out",
+    holidays: 'Holidays',
+    announcements: 'Announcements',
+    lifecycleSignals: 'Lifecycle Signals',
+    noOneOut: 'No approved absences coming up.',
+    audience: 'Audience',
     lifecycleTracker: 'Lifecycle Tracker',
     hireToRetire: 'Hire to retire',
     owner: 'owner',

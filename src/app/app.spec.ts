@@ -181,6 +181,33 @@ function demoDashboard() {
         dueDate: '2026-05-19'
       }
     ],
+    whoIsOut: [
+      {
+        employeeName: 'Muhammad Faique',
+        leaveType: 'Casual Leave',
+        fromDate: '2026-05-22',
+        toDate: '2026-05-22',
+        department: 'Engineering'
+      }
+    ],
+    holidays: [
+      { name: 'Eid Holiday', date: '2026-05-27', type: 'Public Holiday' }
+    ],
+    announcements: [
+      {
+        title: 'Policy refresh',
+        body: 'Attendance and leave policy updates are available in Policies.',
+        publishedOn: '2026-05-18',
+        audience: 'All employees'
+      }
+    ],
+    quickActions: [
+      { label: 'Apply Leave', target: 'leave' },
+      { label: 'Correct Attendance', target: 'attendance' }
+    ],
+    lifecycleSignals: [
+      { label: 'Open onboarding tasks', value: '2', status: 'In progress' }
+    ],
     recentActivity: ['Leave request moved to manager approval']
   };
 }
