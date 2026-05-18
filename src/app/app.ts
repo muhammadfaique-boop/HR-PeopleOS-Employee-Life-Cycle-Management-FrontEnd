@@ -50,7 +50,9 @@ export class App implements OnDestroy {
     fromDate: '',
     toDate: '',
     reason: '',
-    contactDuringLeave: ''
+    contactDuringLeave: '',
+    attachmentFileName: '',
+    attachmentDataUrl: ''
   };
   correctionForm = {
     employeeId: 2,
@@ -64,7 +66,9 @@ export class App implements OnDestroy {
     category: 'Medical OPD',
     amount: 0,
     expenseDate: '',
-    description: ''
+    description: '',
+    receiptFileName: '',
+    receiptDataUrl: ''
   };
   resignationForm = {
     employeeId: 2,
@@ -167,6 +171,20 @@ export class App implements OnDestroy {
     };
     reader.readAsDataURL(file);
     input.value = '';
+  }
+
+  attachLeaveFile(event: Event) {
+    this.readSelectedFile(event, (fileName, dataUrl) => {
+      this.leaveForm.attachmentFileName = fileName;
+      this.leaveForm.attachmentDataUrl = dataUrl;
+    });
+  }
+
+  attachExpenseReceipt(event: Event) {
+    this.readSelectedFile(event, (fileName, dataUrl) => {
+      this.expenseForm.receiptFileName = fileName;
+      this.expenseForm.receiptDataUrl = dataUrl;
+    });
   }
 
   changePassword() {
@@ -327,7 +345,28 @@ export class App implements OnDestroy {
   }
 
   downloadAttendance(format: 'excel' | 'pdf') {
-    window.open(`${this.apiUrl}/peopleos/attendance/download/${format}?employeeId=2`, '_blank');
+    const employeeId = this.session?.employee.id ?? 2;
+    const extension = format === 'pdf' ? 'pdf' : 'csv';
+    const fallbackName = `Login_UserId_${employeeId}.Attendance log.${extension}`;
+
+    this.http.get(`${this.apiUrl}/peopleos/attendance/download/${format}?employeeId=${employeeId}`, {
+      observe: 'response',
+      responseType: 'blob'
+    }).subscribe(response => {
+      const blob = response.body;
+      if (!blob) {
+        return;
+      }
+
+      const contentDisposition = response.headers.get('content-disposition') ?? '';
+      const fileName = this.fileNameFromDisposition(contentDisposition) || fallbackName;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   private loadWorkspace() {
@@ -397,6 +436,24 @@ export class App implements OnDestroy {
   private expireSession() {
     this.logout();
     this.error = this.t('sessionExpired');
+  }
+
+  private readSelectedFile(event: Event, onRead: (fileName: string, dataUrl: string) => void) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => onRead(file.name, String(reader.result));
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  private fileNameFromDisposition(contentDisposition: string): string {
+    const match = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(contentDisposition);
+    return decodeURIComponent(match?.[1] || match?.[2] || '');
   }
 }
 
@@ -503,6 +560,8 @@ interface LeaveRequest {
   totalDays: number;
   reason: string;
   contactDuringLeave: string;
+  attachmentFileName: string;
+  attachmentDataUrl: string;
   status: string;
 }
 
@@ -530,6 +589,8 @@ interface ExpenseClaim {
   amount: number;
   expenseDate: string;
   description: string;
+  receiptFileName: string;
+  receiptDataUrl: string;
   status: string;
   lineManager: string;
 }
@@ -612,6 +673,8 @@ const translations = {
     toDate: 'To date',
     contactDuringLeave: 'Contact during leave',
     submitLeave: 'Submit Leave',
+    attachLeaveDocument: 'Attach leave document',
+    selectedFile: 'Selected file',
     leaveBalance: 'Leave Balance',
     availableDays: 'Available days',
     available: 'available',
@@ -624,6 +687,7 @@ const translations = {
     amount: 'Amount',
     claimDescription: 'Claim description',
     submitClaim: 'Submit Claim',
+    attachReceipt: 'Attach receipt',
     claimHistory: 'Claim History',
     lineManagerRouted: 'Line manager routed',
     resignationRequest: 'Resignation Request',
@@ -725,6 +789,8 @@ const translations = {
     toDate: 'اختتامی تاریخ',
     contactDuringLeave: 'چھٹی کے دوران رابطہ',
     submitLeave: 'چھٹی جمع کریں',
+    attachLeaveDocument: 'چھٹی دستاویز منسلک کریں',
+    selectedFile: 'منتخب فائل',
     leaveBalance: 'چھٹی بیلنس',
     availableDays: 'دستیاب دن',
     available: 'دستیاب',
@@ -737,6 +803,7 @@ const translations = {
     amount: 'رقم',
     claimDescription: 'کلیم تفصیل',
     submitClaim: 'کلیم جمع کریں',
+    attachReceipt: 'رسید منسلک کریں',
     claimHistory: 'کلیم ہسٹری',
     lineManagerRouted: 'لائن مینیجر کو بھیجا گیا',
     resignationRequest: 'استعفیٰ درخواست',
@@ -837,6 +904,8 @@ const translations = {
     toDate: 'إلى تاريخ',
     contactDuringLeave: 'التواصل أثناء الإجازة',
     submitLeave: 'إرسال الإجازة',
+    attachLeaveDocument: 'إرفاق مستند الإجازة',
+    selectedFile: 'الملف المختار',
     leaveBalance: 'رصيد الإجازات',
     availableDays: 'الأيام المتاحة',
     available: 'متاح',
@@ -849,6 +918,7 @@ const translations = {
     amount: 'المبلغ',
     claimDescription: 'وصف المطالبة',
     submitClaim: 'إرسال المطالبة',
+    attachReceipt: 'إرفاق الإيصال',
     claimHistory: 'سجل المطالبات',
     lineManagerRouted: 'موجه للمدير المباشر',
     resignationRequest: 'طلب استقالة',
@@ -949,6 +1019,8 @@ const translations = {
     toDate: 'Date fin',
     contactDuringLeave: 'Contact pendant congé',
     submitLeave: 'Envoyer le congé',
+    attachLeaveDocument: 'Joindre document congé',
+    selectedFile: 'Fichier sélectionné',
     leaveBalance: 'Solde congés',
     availableDays: 'Jours disponibles',
     available: 'disponibles',
@@ -961,6 +1033,7 @@ const translations = {
     amount: 'Montant',
     claimDescription: 'Description de la demande',
     submitClaim: 'Envoyer la demande',
+    attachReceipt: 'Joindre reçu',
     claimHistory: 'Historique demandes',
     lineManagerRouted: 'Routé au manager',
     resignationRequest: 'Demande de démission',
