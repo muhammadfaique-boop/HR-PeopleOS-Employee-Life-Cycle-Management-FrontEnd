@@ -76,8 +76,6 @@
               </div>
               <label class="profile-action">{{ t('uploadImage') }}<input type="file" accept="image/*" (change)="uploadImage($event)" /></label>
               <button type="button" class="profile-action" (click)="showPasswordPanel()">{{ t('changePassword') }}</button>
-              <button type="button" class="profile-action disabled" disabled>{{ t('activateMobileApp') }} <small>{{ t('unavailable') }}</small></button>
-              <button type="button" class="profile-action disabled" disabled>{{ t('setCacheAuthority') }} <small>{{ t('unavailable') }}</small></button>
               <form *ngIf="passwordPanelOpen" class="password-form" (ngSubmit)="changePassword()">
                 <app-form-field [error]="fieldError('currentPassword')"><input pInputText name="currentPassword" required type="password" [placeholder]="t('currentPassword')" [(ngModel)]="passwordForm.currentPassword" /></app-form-field>
                 <app-form-field [error]="fieldError('newPassword')"><input pInputText name="newPassword" required type="password" [placeholder]="t('newPassword')" [(ngModel)]="passwordForm.newPassword" /></app-form-field>

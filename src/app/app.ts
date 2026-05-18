@@ -644,8 +644,6 @@ const translations = {
     updateProfile: 'Update Profile',
     uploadImage: 'Upload Image',
     changePassword: 'Change Password',
-    activateMobileApp: 'Activate Mobile App',
-    setCacheAuthority: 'Set Cache Authority',
     unavailable: 'Unavailable',
     currentPassword: 'Current password',
     newPassword: 'New password',
