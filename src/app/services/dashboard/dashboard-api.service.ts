@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { API_BASE_URL } from '../../../core/config/api.config';
-import { Dashboard } from '../../../shared/models/peopleos.models';
-import { mapDashboardResponse } from '../../peopleos/mappers/peopleos.mapper';
+import { API_BASE_URL } from '../../core/config/api.config';
+import { Dashboard } from '../../shared/models/peopleos.models';
+import { mapDashboardResponse } from '../../features/peopleos/mappers/peopleos.mapper';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardApiService {

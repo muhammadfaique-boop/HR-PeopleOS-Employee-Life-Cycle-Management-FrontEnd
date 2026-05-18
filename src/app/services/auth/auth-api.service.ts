@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { API_BASE_URL } from '../../../core/config/api.config';
-import { Session } from '../../../shared/models/peopleos.models';
-import { ChangePasswordRequestDto } from '../models/change-password-request.dto';
-import { LoginRequestDto } from '../models/login-request.dto';
+import { API_BASE_URL } from '../../core/config/api.config';
+import { Session } from '../../shared/models/peopleos.models';
+import { ChangePasswordRequestDto } from '../../features/auth/change-password-request.dto';
+import { LoginRequestDto } from '../../features/auth/login-request.dto';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
