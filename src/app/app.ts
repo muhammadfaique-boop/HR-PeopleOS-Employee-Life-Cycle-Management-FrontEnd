@@ -1,28 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnDestroy, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { FileReaderService } from './core/services/file-reader.service';
 import { PeopleOsFacade } from './features/peopleos/store/peopleos-facade.service';
 import { PRIMENG_UI_IMPORTS } from './shared/components/ui/primeng-ui.imports';
 import { collectRequiredFieldErrors } from './shared/validators/required-fields.validator';
 import {
-  AttendanceCorrectionFormModel,
   AttendanceData,
   BenefitPlan,
   Dashboard,
-  Employee,
   ExpenseClaim,
-  ExpenseFormModel,
   LeaveData,
-  LeaveFormModel,
   NotificationItem,
   NotificationTone,
-  PasswordFormModel,
   PermissionKey,
   PermissionScope,
   PolicyDocument,
-  ResignationFormModel,
   ResignationRequest,
   Session,
   SupportedLanguage,
@@ -31,18 +25,17 @@ import {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule, ...PRIMENG_UI_IMPORTS],
+  imports: [CommonModule, ReactiveFormsModule, ...PRIMENG_UI_IMPORTS],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnDestroy {
   private readonly peopleOs = inject(PeopleOsFacade);
   private readonly fileReader = inject(FileReaderService);
+  private readonly fb = inject(NonNullableFormBuilder);
   private readonly inactivityLimitMs = 20 * 60 * 1000;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 
-  email = 'employee@peopleos.dev';
-  password = 'Employee@123';
   error = '';
   loading = false;
   workspaceLoading = false;
@@ -62,44 +55,50 @@ export class App implements OnDestroy {
   readNotificationKeys = new Set<string>();
   profileMenuOpen = false;
   passwordPanelOpen = false;
-  selectedLanguage = 'English';
-  profileImageUrl = '';
-  passwordForm: PasswordFormModel = {
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  };
-  leaveForm: LeaveFormModel = {
-    employeeId: 2,
-    leaveType: 'Casual Leave',
-    fromDate: '',
-    toDate: '',
-    reason: '',
-    contactDuringLeave: '',
-    attachmentFileName: '',
-    attachmentDataUrl: ''
-  };
-  correctionForm: AttendanceCorrectionFormModel = {
-    employeeId: 2,
-    workDate: '',
-    requestedChange: '',
-    reason: ''
-  };
-  expenseForm: ExpenseFormModel = {
-    employeeId: 2,
-    claimType: 'Medical Expense OPD',
-    category: 'Medical OPD',
-    amount: 0,
-    expenseDate: '',
-    description: '',
-    receiptFileName: '',
-    receiptDataUrl: ''
-  };
-  resignationForm: ResignationFormModel = {
-    employeeId: 2,
-    lastWorkingDate: '',
-    reason: ''
-  };
+  readonly loginForm = this.fb.group({
+    email: ['employee@peopleos.dev', Validators.required],
+    password: ['Employee@123', Validators.required]
+  });
+  readonly passwordForm = this.fb.group({
+    currentPassword: ['', Validators.required],
+    newPassword: ['', Validators.required],
+    confirmPassword: ['', Validators.required]
+  });
+  readonly leaveForm = this.fb.group({
+    employeeId: [2],
+    leaveType: ['Casual Leave', Validators.required],
+    fromDate: ['', Validators.required],
+    toDate: ['', Validators.required],
+    reason: ['', Validators.required],
+    contactDuringLeave: ['', Validators.required],
+    attachmentFileName: [''],
+    attachmentDataUrl: ['']
+  });
+  readonly correctionForm = this.fb.group({
+    employeeId: [2],
+    workDate: ['', Validators.required],
+    requestedChange: ['', Validators.required],
+    reason: ['', Validators.required]
+  });
+  readonly expenseForm = this.fb.group({
+    employeeId: [2],
+    claimType: ['Medical Expense OPD', Validators.required],
+    category: ['Medical OPD', Validators.required],
+    amount: [0, Validators.min(1)],
+    expenseDate: ['', Validators.required],
+    description: ['', Validators.required],
+    receiptFileName: [''],
+    receiptDataUrl: ['']
+  });
+  readonly resignationForm = this.fb.group({
+    employeeId: [2],
+    lastWorkingDate: ['', Validators.required],
+    reason: ['', Validators.required]
+  });
+  readonly profileForm = this.fb.group({
+    preferredLanguage: ['English' as SupportedLanguage, Validators.required],
+    profileImageUrl: ['']
+  });
   private readonly viewPermissions: Record<ViewKey, PermissionKey> = {
     overview: 'attendance.read',
     people: 'employee.read',
@@ -115,6 +114,10 @@ export class App implements OnDestroy {
   readonly expenseClaimOptions = ['Medical Expense OPD', 'Business Expense'].map(value => ({ label: value, value }));
   readonly expenseCategoryOptions = ['Medical OPD', 'Business Expense'].map(value => ({ label: value, value }));
   readonly languageOptions: SupportedLanguage[] = ['English', 'Urdu', 'Arabic', 'French'];
+
+  get selectedLanguage(): SupportedLanguage {
+    return this.profileForm.controls.preferredLanguage.value as SupportedLanguage;
+  }
 
   @HostListener('document:mousemove')
   @HostListener('document:keydown')
@@ -135,7 +138,8 @@ export class App implements OnDestroy {
 
   login() {
     this.validationErrors = {};
-    if (!this.email.trim() || !this.password.trim()) {
+    const credentials = this.loginForm.getRawValue();
+    if (!credentials.email.trim() || !credentials.password.trim()) {
       this.error = this.t('requiredLogin');
       return;
     }
@@ -144,13 +148,12 @@ export class App implements OnDestroy {
     this.error = '';
 
     this.peopleOs.login({
-      email: this.email,
-      password: this.password
+      email: credentials.email,
+      password: credentials.password
     }).subscribe({
       next: session => {
         this.session = session;
-        this.selectedLanguage = session.employee.preferredLanguage || 'English';
-        this.profileImageUrl = session.employee.profileImageUrl || '';
+        this.resetSessionDrafts(session);
         this.resetInactivityTimer();
         this.loadWorkspace();
       },
@@ -164,9 +167,20 @@ export class App implements OnDestroy {
   logout() {
     this.session = null;
     this.dashboard = null;
+    this.attendance = null;
+    this.leave = null;
+    this.benefits = [];
+    this.policies = [];
+    this.expenseClaims = [];
+    this.resignations = [];
     this.activeView = 'overview';
     this.profileMenuOpen = false;
     this.passwordPanelOpen = false;
+    this.notificationsOpen = false;
+    this.readNotificationKeys.clear();
+    this.validationErrors = {};
+    this.message = '';
+    this.resetSessionDrafts();
     this.clearInactivityTimer();
   }
 
@@ -232,7 +246,7 @@ export class App implements OnDestroy {
         return;
       }
 
-      this.profileImageUrl = attachment.dataUrl;
+      this.profileForm.patchValue({ profileImageUrl: attachment.dataUrl });
       this.updateProfile();
     });
   }
@@ -243,8 +257,10 @@ export class App implements OnDestroy {
         return;
       }
 
-      this.leaveForm.attachmentFileName = attachment.fileName;
-      this.leaveForm.attachmentDataUrl = attachment.dataUrl;
+      this.leaveForm.patchValue({
+        attachmentFileName: attachment.fileName,
+        attachmentDataUrl: attachment.dataUrl
+      });
     });
   }
 
@@ -254,8 +270,10 @@ export class App implements OnDestroy {
         return;
       }
 
-      this.expenseForm.receiptFileName = attachment.fileName;
-      this.expenseForm.receiptDataUrl = attachment.dataUrl;
+      this.expenseForm.patchValue({
+        receiptFileName: attachment.fileName,
+        receiptDataUrl: attachment.dataUrl
+      });
     });
   }
 
@@ -265,15 +283,16 @@ export class App implements OnDestroy {
     }
 
     this.validationErrors = {};
+    const passwordForm = this.passwordForm.getRawValue();
     if (!this.requireFields([
-      ['currentPassword', this.passwordForm.currentPassword],
-      ['newPassword', this.passwordForm.newPassword],
-      ['confirmPassword', this.passwordForm.confirmPassword]
+      ['currentPassword', passwordForm.currentPassword],
+      ['newPassword', passwordForm.newPassword],
+      ['confirmPassword', passwordForm.confirmPassword]
     ])) {
       return;
     }
 
-    if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       this.message = this.t('passwordMismatch');
       return;
     }
@@ -281,11 +300,11 @@ export class App implements OnDestroy {
     this.formBusy = 'password';
     this.peopleOs.changePassword({
       email: this.session.email,
-      currentPassword: this.passwordForm.currentPassword,
-      newPassword: this.passwordForm.newPassword
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword
     }).pipe(finalize(() => this.formBusy = '')).subscribe({
       next: () => {
-        this.passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
+        this.passwordForm.reset();
         this.passwordPanelOpen = false;
         this.message = this.t('passwordChanged');
       },
@@ -328,19 +347,21 @@ export class App implements OnDestroy {
     }
 
     this.validationErrors = {};
+    const leaveForm = this.leaveForm.getRawValue();
     if (!this.requireFields([
-      ['fromDate', this.leaveForm.fromDate],
-      ['toDate', this.leaveForm.toDate],
-      ['leaveReason', this.leaveForm.reason],
-      ['leaveContact', this.leaveForm.contactDuringLeave]
+      ['fromDate', leaveForm.fromDate],
+      ['toDate', leaveForm.toDate],
+      ['leaveReason', leaveForm.reason],
+      ['leaveContact', leaveForm.contactDuringLeave]
     ])) {
       return;
     }
 
     this.formBusy = 'leave';
-    this.peopleOs.submitLeave(this.leaveForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitLeave(leaveForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.leave?.requests.unshift(item);
       this.message = this.t('leaveSubmitted');
+      this.resetLeaveForm();
       this.loadWorkspace();
     });
   }
@@ -352,18 +373,20 @@ export class App implements OnDestroy {
     }
 
     this.validationErrors = {};
+    const correctionForm = this.correctionForm.getRawValue();
     if (!this.requireFields([
-      ['correctionDate', this.correctionForm.workDate],
-      ['requestedChange', this.correctionForm.requestedChange],
-      ['correctionReason', this.correctionForm.reason]
+      ['correctionDate', correctionForm.workDate],
+      ['requestedChange', correctionForm.requestedChange],
+      ['correctionReason', correctionForm.reason]
     ])) {
       return;
     }
 
     this.formBusy = 'correction';
-    this.peopleOs.submitCorrection(this.correctionForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitCorrection(correctionForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.attendance?.corrections.unshift(item);
       this.message = this.t('correctionSubmitted');
+      this.resetCorrectionForm();
       this.loadWorkspace();
     });
   }
@@ -375,18 +398,20 @@ export class App implements OnDestroy {
     }
 
     this.validationErrors = {};
+    const expenseForm = this.expenseForm.getRawValue();
     if (!this.requireFields([
-      ['expenseDate', this.expenseForm.expenseDate],
-      ['amount', this.expenseForm.amount > 0 ? String(this.expenseForm.amount) : ''],
-      ['expenseDescription', this.expenseForm.description]
+      ['expenseDate', expenseForm.expenseDate],
+      ['amount', expenseForm.amount > 0 ? String(expenseForm.amount) : ''],
+      ['expenseDescription', expenseForm.description]
     ])) {
       return;
     }
 
     this.formBusy = 'expense';
-    this.peopleOs.submitExpense(this.expenseForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitExpense(expenseForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.expenseClaims.unshift(item);
       this.message = this.t('expenseSubmitted');
+      this.resetExpenseForm();
       this.loadWorkspace();
     });
   }
@@ -398,17 +423,19 @@ export class App implements OnDestroy {
     }
 
     this.validationErrors = {};
+    const resignationForm = this.resignationForm.getRawValue();
     if (!this.requireFields([
-      ['lastWorkingDate', this.resignationForm.lastWorkingDate],
-      ['resignationReason', this.resignationForm.reason]
+      ['lastWorkingDate', resignationForm.lastWorkingDate],
+      ['resignationReason', resignationForm.reason]
     ])) {
       return;
     }
 
     this.formBusy = 'resignation';
-    this.peopleOs.submitResignation(this.resignationForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
+    this.peopleOs.submitResignation(resignationForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.resignations.unshift(item);
       this.message = this.t('resignationSubmitted');
+      this.resetResignationForm();
       this.loadWorkspace();
     });
   }
@@ -424,18 +451,23 @@ export class App implements OnDestroy {
     }
 
     this.validationErrors = {};
+    const profileForm = this.profileForm.getRawValue();
     if (!this.requireFields([
-      ['language', this.selectedLanguage]
+      ['language', profileForm.preferredLanguage]
     ])) {
       return;
     }
 
     this.formBusy = 'profile';
     this.peopleOs.updateProfile(this.session.employee.id, {
-      preferredLanguage: this.selectedLanguage,
-      profileImageUrl: this.profileImageUrl
+      preferredLanguage: profileForm.preferredLanguage,
+      profileImageUrl: profileForm.profileImageUrl
     }).pipe(finalize(() => this.formBusy = '')).subscribe(employee => {
       this.session = { ...this.session!, employee };
+      this.profileForm.patchValue({
+        preferredLanguage: employee.preferredLanguage || 'English',
+        profileImageUrl: employee.profileImageUrl || ''
+      });
       this.message = this.t('profileUpdated');
       this.profileMenuOpen = false;
     });
@@ -521,6 +553,63 @@ export class App implements OnDestroy {
     };
 
     return Object.keys(this.validationErrors).length === 0;
+  }
+
+  private resetSessionDrafts(session?: Session) {
+    const employeeId = session?.employee.id ?? 2;
+
+    this.passwordForm.reset();
+    this.resetLeaveForm(employeeId);
+    this.resetCorrectionForm(employeeId);
+    this.resetExpenseForm(employeeId);
+    this.resetResignationForm(employeeId);
+    this.profileForm.reset({
+      preferredLanguage: session?.employee.preferredLanguage || 'English',
+      profileImageUrl: session?.employee.profileImageUrl || ''
+    });
+  }
+
+  private resetLeaveForm(employeeId = this.session?.employee.id ?? 2) {
+    this.leaveForm.reset({
+      employeeId,
+      leaveType: 'Casual Leave',
+      fromDate: '',
+      toDate: '',
+      reason: '',
+      contactDuringLeave: '',
+      attachmentFileName: '',
+      attachmentDataUrl: ''
+    });
+  }
+
+  private resetCorrectionForm(employeeId = this.session?.employee.id ?? 2) {
+    this.correctionForm.reset({
+      employeeId,
+      workDate: '',
+      requestedChange: '',
+      reason: ''
+    });
+  }
+
+  private resetExpenseForm(employeeId = this.session?.employee.id ?? 2) {
+    this.expenseForm.reset({
+      employeeId,
+      claimType: 'Medical Expense OPD',
+      category: 'Medical OPD',
+      amount: 0,
+      expenseDate: '',
+      description: '',
+      receiptFileName: '',
+      receiptDataUrl: ''
+    });
+  }
+
+  private resetResignationForm(employeeId = this.session?.employee.id ?? 2) {
+    this.resignationForm.reset({
+      employeeId,
+      lastWorkingDate: '',
+      reason: ''
+    });
   }
 
   private scopeRank(scope: PermissionScope): number {
