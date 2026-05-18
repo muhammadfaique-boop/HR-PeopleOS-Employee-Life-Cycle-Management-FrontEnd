@@ -13,18 +13,18 @@ import {
   Session
 } from '../../../shared/models/peopleos.models';
 import { FileDownloadService } from '../../../core/services/file-download.service';
-import { AttendanceApiService } from '../../attendance/services/attendance-api.service';
-import { AuthApiService } from '../../auth/services/auth-api.service';
-import { ChangePasswordRequestDto } from '../../auth/models/change-password-request.dto';
-import { LoginRequestDto } from '../../auth/models/login-request.dto';
-import { BenefitsApiService } from '../../benefits/services/benefits-api.service';
-import { DashboardApiService } from '../../dashboard/services/dashboard-api.service';
-import { ExpenseApiService } from '../../expense/services/expense-api.service';
-import { LeaveApiService } from '../../leave/services/leave-api.service';
-import { ProfileUpdateRequestDto } from '../../people/models/profile-update-request.dto';
-import { PeopleApiService } from '../../people/services/people-api.service';
-import { PoliciesApiService } from '../../policies/services/policies-api.service';
-import { ResignationApiService } from '../../resignation/services/resignation-api.service';
+import { AttendanceApiService } from '../../../services/attendance/attendance-api.service';
+import { AuthApiService } from '../../../services/auth/auth-api.service';
+import { ChangePasswordRequestDto } from '../../auth/change-password-request.dto';
+import { LoginRequestDto } from '../../auth/login-request.dto';
+import { BenefitsApiService } from '../../../services/benefits/benefits-api.service';
+import { DashboardApiService } from '../../../services/dashboard/dashboard-api.service';
+import { ExpenseApiService } from '../../../services/expense/expense-api.service';
+import { LeaveApiService } from '../../../services/leave/leave-api.service';
+import { ProfileUpdateRequestDto } from '../../people/profile-update-request.dto';
+import { PeopleApiService } from '../../../services/people/people-api.service';
+import { PoliciesApiService } from '../../../services/policies/policies-api.service';
+import { ResignationApiService } from '../../../services/resignation/resignation-api.service';
 
 export interface PeopleOsWorkspaceResponse {
   dashboard: Dashboard;

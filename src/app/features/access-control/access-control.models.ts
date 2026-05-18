@@ -1,4 +1,4 @@
-import { Employee } from '../../people/models/people.models';
+import { Employee } from '../people/people.models';
 
 export type PermissionScope = 'own' | 'team' | 'department' | 'branch' | 'organization';
 export type PermissionKey =
