@@ -57,8 +57,30 @@
               <p class="empty-state" *ngIf="!notifications.length">{{ t('noNotifications') }}</p>
             </div>
           </div>
-          <img *ngIf="session.employee.profileImageUrl" class="profile-photo" [src]="session.employee.profileImageUrl" alt="Profile" />
-          <button type="button" (click)="logout()">{{ t('signOut') }}</button>
+          <div class="profile-menu-wrap">
+            <button type="button" class="profile-trigger" (click)="toggleProfileMenu()">
+              <img *ngIf="session.employee.profileImageUrl" class="profile-photo" [src]="session.employee.profileImageUrl" alt="Profile" />
+              <span *ngIf="!session.employee.profileImageUrl" class="profile-initial">{{ session.employee.fullName[0] }}</span>
+            </button>
+            <div class="profile-menu" *ngIf="profileMenuOpen">
+              <div class="profile-menu-head">
+                <img *ngIf="session.employee.profileImageUrl" class="profile-photo large" [src]="session.employee.profileImageUrl" alt="Profile" />
+                <span *ngIf="!session.employee.profileImageUrl" class="profile-initial large">{{ session.employee.fullName[0] }}</span>
+                <div><strong>{{ session.employee.fullName }}</strong><span>{{ session.employee.email }}</span></div>
+              </div>
+              <label class="profile-action">{{ t('uploadImage') }}<input type="file" accept="image/*" (change)="uploadImage($event)" /></label>
+              <button type="button" class="profile-action" (click)="showPasswordPanel()">{{ t('changePassword') }}</button>
+              <button type="button" class="profile-action disabled" disabled>{{ t('activateMobileApp') }} <small>{{ t('unavailable') }}</small></button>
+              <button type="button" class="profile-action disabled" disabled>{{ t('setCacheAuthority') }} <small>{{ t('unavailable') }}</small></button>
+              <form *ngIf="passwordPanelOpen" class="password-form" (ngSubmit)="changePassword()">
+                <input name="currentPassword" type="password" [placeholder]="t('currentPassword')" [(ngModel)]="passwordForm.currentPassword" />
+                <input name="newPassword" type="password" [placeholder]="t('newPassword')" [(ngModel)]="passwordForm.newPassword" />
+                <input name="confirmPassword" type="password" [placeholder]="t('confirmPassword')" [(ngModel)]="passwordForm.confirmPassword" />
+                <button type="submit">{{ t('savePassword') }}</button>
+              </form>
+              <button type="button" class="logout-button" (click)="logout()">{{ t('signOut') }}</button>
+            </div>
+          </div>
         </div>
       </header>
       <p class="toast" *ngIf="message">{{ message }}</p>

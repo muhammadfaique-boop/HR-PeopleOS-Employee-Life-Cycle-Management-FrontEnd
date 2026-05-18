@@ -372,6 +372,142 @@ h2 {
   object-fit: cover;
 }
 
+.profile-menu-wrap {
+  position: relative;
+}
+
+.profile-trigger {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.profile-initial {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #007777;
+  color: #fff;
+  font-weight: 900;
+}
+
+.profile-photo.large,
+.profile-initial.large {
+  width: 62px;
+  height: 62px;
+}
+
+.profile-menu {
+  position: absolute;
+  top: 58px;
+  right: 0;
+  width: min(390px, 86vw);
+  background: #fff;
+  border: 1px solid #ded6c8;
+  border-radius: 8px;
+  box-shadow: 0 20px 44px rgba(23, 33, 29, 0.16);
+  overflow: hidden;
+  z-index: 25;
+}
+
+.profile-menu::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  right: 28px;
+  width: 22px;
+  height: 22px;
+  background: #009c99;
+  transform: rotate(45deg);
+}
+
+.profile-menu-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: #009c99;
+  color: #fff;
+  padding: 22px 18px;
+}
+
+.profile-menu-head div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.profile-menu-head strong {
+  font-size: 22px;
+}
+
+.profile-menu-head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-action {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 15px 18px;
+  background: #fff;
+  color: #6c5ce7;
+  border-radius: 0;
+  border-bottom: 1px solid #f0e8dc;
+  text-align: left;
+  font-weight: 800;
+}
+
+.profile-action input {
+  display: none;
+}
+
+.profile-action.disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.profile-action small {
+  text-decoration: none;
+  color: #9ca3af;
+}
+
+.password-form {
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #fffaf2;
+  border-bottom: 1px solid #f0e8dc;
+}
+
+.password-form input {
+  padding: 11px 12px;
+}
+
+.password-form button {
+  background: #e1b84f;
+  color: #17211d;
+  padding: 11px 12px;
+}
+
+.logout-button {
+  margin: 18px;
+  min-width: 124px;
+  background: #fff;
+  border: 1px solid #e3e7ee;
+  color: #6c5ce7;
+  padding: 12px 18px;
+  border-radius: 999px;
+}
+
 .toast {
   background: #e8f3ef;
   border: 1px solid #b7d8cd;
@@ -634,6 +770,20 @@ th {
 .rtl .notification-menu {
   right: auto;
   left: 0;
+}
+
+.rtl .profile-menu {
+  right: auto;
+  left: 0;
+}
+
+.rtl .profile-menu::before {
+  right: auto;
+  left: 28px;
+}
+
+.rtl .profile-action {
+  text-align: right;
 }
 
 .rtl .notification-menu article.urgent,

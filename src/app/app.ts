@@ -28,8 +28,15 @@ export class App {
   activeView: ViewKey = 'overview';
   message = '';
   notificationsOpen = false;
+  profileMenuOpen = false;
+  passwordPanelOpen = false;
   selectedLanguage = 'English';
   profileImageUrl = '';
+  passwordForm = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
   leaveForm = {
     employeeId: 2,
     leaveType: 'Casual Leave',
@@ -83,19 +90,73 @@ export class App {
     this.session = null;
     this.dashboard = null;
     this.activeView = 'overview';
+    this.profileMenuOpen = false;
   }
 
   selectView(view: ViewKey) {
     this.activeView = view;
     this.notificationsOpen = false;
+    this.profileMenuOpen = false;
   }
 
   toggleNotifications() {
     this.notificationsOpen = !this.notificationsOpen;
+    this.profileMenuOpen = false;
   }
 
   markNotificationsRead() {
     this.notificationsOpen = false;
+  }
+
+  toggleProfileMenu() {
+    this.profileMenuOpen = !this.profileMenuOpen;
+    this.notificationsOpen = false;
+  }
+
+  showPasswordPanel() {
+    this.passwordPanelOpen = !this.passwordPanelOpen;
+  }
+
+  uploadImage(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !this.session) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.profileImageUrl = String(reader.result);
+      this.updateProfile();
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  changePassword() {
+    if (!this.session) {
+      return;
+    }
+
+    if (!this.passwordForm.currentPassword || !this.passwordForm.newPassword || this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+      this.message = this.t('passwordMismatch');
+      return;
+    }
+
+    this.http.post(`${this.apiUrl}/auth/change-password`, {
+      email: this.session.email,
+      currentPassword: this.passwordForm.currentPassword,
+      newPassword: this.passwordForm.newPassword
+    }).subscribe({
+      next: () => {
+        this.passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
+        this.passwordPanelOpen = false;
+        this.message = this.t('passwordChanged');
+      },
+      error: () => {
+        this.message = this.t('passwordChangeFailed');
+      }
+    });
   }
 
   get notifications(): NotificationItem[] {
@@ -165,6 +226,7 @@ export class App {
     }).subscribe(employee => {
       this.session = { ...this.session!, employee };
       this.message = this.t('profileUpdated');
+      this.profileMenuOpen = false;
     });
   }
 
@@ -455,6 +517,15 @@ const translations = {
     language: 'Language',
     profileImageUrl: 'Profile image URL',
     updateProfile: 'Update Profile',
+    uploadImage: 'Upload Image',
+    changePassword: 'Change Password',
+    activateMobileApp: 'Activate Mobile App',
+    setCacheAuthority: 'Set Cache Authority',
+    unavailable: 'Unavailable',
+    currentPassword: 'Current password',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm password',
+    savePassword: 'Save Password',
     policiesDownloads: 'Policies and Downloads',
     knowledgeBase: 'Knowledge base',
     policy: 'Policy',
@@ -468,6 +539,10 @@ const translations = {
     expenseSubmitted: 'Expense claim submitted to line manager.',
     resignationSubmitted: 'Resignation request submitted to line manager.',
     profileUpdated: 'Profile settings updated.'
+    ,
+    passwordChanged: 'Password changed successfully.',
+    passwordMismatch: 'New password and confirmation must match.',
+    passwordChangeFailed: 'Current password is not correct.'
   },
   Urdu: {
     appTitle: 'پیپل او ایس',
@@ -550,6 +625,15 @@ const translations = {
     language: 'زبان',
     profileImageUrl: 'پروفائل تصویر URL',
     updateProfile: 'پروفائل اپڈیٹ',
+    uploadImage: 'تصویر اپ لوڈ',
+    changePassword: 'پاس ورڈ تبدیل کریں',
+    activateMobileApp: 'موبائل ایپ فعال کریں',
+    setCacheAuthority: 'کیش اتھارٹی سیٹ کریں',
+    unavailable: 'دستیاب نہیں',
+    currentPassword: 'موجودہ پاس ورڈ',
+    newPassword: 'نیا پاس ورڈ',
+    confirmPassword: 'پاس ورڈ تصدیق',
+    savePassword: 'پاس ورڈ محفوظ',
     policiesDownloads: 'پالیسیاں اور ڈاؤن لوڈز',
     knowledgeBase: 'علمی مرکز',
     policy: 'پالیسی',
@@ -562,7 +646,10 @@ const translations = {
     correctionSubmitted: 'حاضری درستگی لائن مینیجر کو بھیج دی گئی۔',
     expenseSubmitted: 'اخراجات کلیم لائن مینیجر کو بھیج دیا گیا۔',
     resignationSubmitted: 'استعفیٰ درخواست لائن مینیجر کو بھیج دی گئی۔',
-    profileUpdated: 'پروفائل سیٹنگز اپڈیٹ ہو گئیں۔'
+    profileUpdated: 'پروفائل سیٹنگز اپڈیٹ ہو گئیں۔',
+    passwordChanged: 'پاس ورڈ کامیابی سے تبدیل ہو گیا۔',
+    passwordMismatch: 'نیا پاس ورڈ اور تصدیق ایک جیسے ہونے چاہئیں۔',
+    passwordChangeFailed: 'موجودہ پاس ورڈ درست نہیں۔'
   },
   Arabic: {
     appTitle: 'PeopleOS',
@@ -645,6 +732,15 @@ const translations = {
     language: 'اللغة',
     profileImageUrl: 'رابط صورة الملف',
     updateProfile: 'تحديث الملف',
+    uploadImage: 'رفع الصورة',
+    changePassword: 'تغيير كلمة المرور',
+    activateMobileApp: 'تفعيل تطبيق الجوال',
+    setCacheAuthority: 'تعيين صلاحية التخزين',
+    unavailable: 'غير متاح',
+    currentPassword: 'كلمة المرور الحالية',
+    newPassword: 'كلمة مرور جديدة',
+    confirmPassword: 'تأكيد كلمة المرور',
+    savePassword: 'حفظ كلمة المرور',
     policiesDownloads: 'السياسات والتنزيلات',
     knowledgeBase: 'قاعدة المعرفة',
     policy: 'السياسة',
@@ -657,7 +753,10 @@ const translations = {
     correctionSubmitted: 'تم إرسال تصحيح الحضور إلى المدير المباشر.',
     expenseSubmitted: 'تم إرسال مطالبة المصروفات إلى المدير المباشر.',
     resignationSubmitted: 'تم إرسال طلب الاستقالة إلى المدير المباشر.',
-    profileUpdated: 'تم تحديث إعدادات الملف الشخصي.'
+    profileUpdated: 'تم تحديث إعدادات الملف الشخصي.',
+    passwordChanged: 'تم تغيير كلمة المرور بنجاح.',
+    passwordMismatch: 'يجب أن تتطابق كلمة المرور الجديدة مع التأكيد.',
+    passwordChangeFailed: 'كلمة المرور الحالية غير صحيحة.'
   },
   French: {
     appTitle: 'PeopleOS',
@@ -740,6 +839,15 @@ const translations = {
     language: 'Langue',
     profileImageUrl: 'URL photo profil',
     updateProfile: 'Mettre à jour',
+    uploadImage: 'Importer image',
+    changePassword: 'Changer mot de passe',
+    activateMobileApp: 'Activer app mobile',
+    setCacheAuthority: 'Définir autorité cache',
+    unavailable: 'Indisponible',
+    currentPassword: 'Mot de passe actuel',
+    newPassword: 'Nouveau mot de passe',
+    confirmPassword: 'Confirmer mot de passe',
+    savePassword: 'Enregistrer',
     policiesDownloads: 'Politiques et téléchargements',
     knowledgeBase: 'Base de connaissance',
     policy: 'Politique',
@@ -752,7 +860,10 @@ const translations = {
     correctionSubmitted: 'Correction de présence envoyée au manager.',
     expenseSubmitted: 'Note de frais envoyée au manager.',
     resignationSubmitted: 'Demande de démission envoyée au manager.',
-    profileUpdated: 'Paramètres du profil mis à jour.'
+    profileUpdated: 'Paramètres du profil mis à jour.',
+    passwordChanged: 'Mot de passe modifié.',
+    passwordMismatch: 'Le nouveau mot de passe et la confirmation doivent correspondre.',
+    passwordChangeFailed: 'Le mot de passe actuel est incorrect.'
   }
 } as const;
 
