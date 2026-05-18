@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -9,14 +10,19 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App {
+export class App implements OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'http://localhost:5265/api';
+  private readonly inactivityLimitMs = 20 * 60 * 1000;
+  private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 
   email = 'employee@peopleos.dev';
   password = 'Employee@123';
   error = '';
   loading = false;
+  workspaceLoading = false;
+  formBusy = '';
+  validationErrors: Record<string, string> = {};
   session: Session | null = null;
   dashboard: Dashboard | null = null;
   attendance: AttendanceData | null = null;
@@ -66,7 +72,30 @@ export class App {
     reason: ''
   };
 
+  @HostListener('document:mousemove')
+  @HostListener('document:keydown')
+  @HostListener('document:click')
+  @HostListener('document:scroll')
+  resetInactivityTimer() {
+    if (!this.session) {
+      return;
+    }
+
+    this.clearInactivityTimer();
+    this.inactivityTimer = setTimeout(() => this.expireSession(), this.inactivityLimitMs);
+  }
+
+  ngOnDestroy() {
+    this.clearInactivityTimer();
+  }
+
   login() {
+    this.validationErrors = {};
+    if (!this.email.trim() || !this.password.trim()) {
+      this.error = this.t('requiredLogin');
+      return;
+    }
+
     this.loading = true;
     this.error = '';
 
@@ -78,6 +107,7 @@ export class App {
         this.session = session;
         this.selectedLanguage = session.employee.preferredLanguage || 'English';
         this.profileImageUrl = session.employee.profileImageUrl || '';
+        this.resetInactivityTimer();
         this.loadWorkspace();
       },
       error: () => {
@@ -92,6 +122,8 @@ export class App {
     this.dashboard = null;
     this.activeView = 'overview';
     this.profileMenuOpen = false;
+    this.passwordPanelOpen = false;
+    this.clearInactivityTimer();
   }
 
   selectView(view: ViewKey) {
@@ -142,16 +174,26 @@ export class App {
       return;
     }
 
-    if (!this.passwordForm.currentPassword || !this.passwordForm.newPassword || this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+    this.validationErrors = {};
+    if (!this.requireFields([
+      ['currentPassword', this.passwordForm.currentPassword],
+      ['newPassword', this.passwordForm.newPassword],
+      ['confirmPassword', this.passwordForm.confirmPassword]
+    ])) {
+      return;
+    }
+
+    if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
       this.message = this.t('passwordMismatch');
       return;
     }
 
+    this.formBusy = 'password';
     this.http.post(`${this.apiUrl}/auth/change-password`, {
       email: this.session.email,
       currentPassword: this.passwordForm.currentPassword,
       newPassword: this.passwordForm.newPassword
-    }).subscribe({
+    }).pipe(finalize(() => this.formBusy = '')).subscribe({
       next: () => {
         this.passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
         this.passwordPanelOpen = false;
@@ -190,7 +232,18 @@ export class App {
   }
 
   submitLeave() {
-    this.http.post<LeaveRequest>(`${this.apiUrl}/peopleos/leave/requests`, this.leaveForm).subscribe(item => {
+    this.validationErrors = {};
+    if (!this.requireFields([
+      ['fromDate', this.leaveForm.fromDate],
+      ['toDate', this.leaveForm.toDate],
+      ['leaveReason', this.leaveForm.reason],
+      ['leaveContact', this.leaveForm.contactDuringLeave]
+    ])) {
+      return;
+    }
+
+    this.formBusy = 'leave';
+    this.http.post<LeaveRequest>(`${this.apiUrl}/peopleos/leave/requests`, this.leaveForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.leave?.requests.unshift(item);
       this.message = this.t('leaveSubmitted');
       this.loadWorkspace();
@@ -198,7 +251,17 @@ export class App {
   }
 
   submitCorrection() {
-    this.http.post<AttendanceCorrection>(`${this.apiUrl}/peopleos/attendance/corrections`, this.correctionForm).subscribe(item => {
+    this.validationErrors = {};
+    if (!this.requireFields([
+      ['correctionDate', this.correctionForm.workDate],
+      ['requestedChange', this.correctionForm.requestedChange],
+      ['correctionReason', this.correctionForm.reason]
+    ])) {
+      return;
+    }
+
+    this.formBusy = 'correction';
+    this.http.post<AttendanceCorrection>(`${this.apiUrl}/peopleos/attendance/corrections`, this.correctionForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.attendance?.corrections.unshift(item);
       this.message = this.t('correctionSubmitted');
       this.loadWorkspace();
@@ -206,7 +269,17 @@ export class App {
   }
 
   submitExpense() {
-    this.http.post<ExpenseClaim>(`${this.apiUrl}/peopleos/expense/claims`, this.expenseForm).subscribe(item => {
+    this.validationErrors = {};
+    if (!this.requireFields([
+      ['expenseDate', this.expenseForm.expenseDate],
+      ['amount', this.expenseForm.amount > 0 ? String(this.expenseForm.amount) : ''],
+      ['expenseDescription', this.expenseForm.description]
+    ])) {
+      return;
+    }
+
+    this.formBusy = 'expense';
+    this.http.post<ExpenseClaim>(`${this.apiUrl}/peopleos/expense/claims`, this.expenseForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.expenseClaims.unshift(item);
       this.message = this.t('expenseSubmitted');
       this.loadWorkspace();
@@ -214,7 +287,16 @@ export class App {
   }
 
   submitResignation() {
-    this.http.post<ResignationRequest>(`${this.apiUrl}/peopleos/resignations`, this.resignationForm).subscribe(item => {
+    this.validationErrors = {};
+    if (!this.requireFields([
+      ['lastWorkingDate', this.resignationForm.lastWorkingDate],
+      ['resignationReason', this.resignationForm.reason]
+    ])) {
+      return;
+    }
+
+    this.formBusy = 'resignation';
+    this.http.post<ResignationRequest>(`${this.apiUrl}/peopleos/resignations`, this.resignationForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.resignations.unshift(item);
       this.message = this.t('resignationSubmitted');
       this.loadWorkspace();
@@ -226,10 +308,18 @@ export class App {
       return;
     }
 
+    this.validationErrors = {};
+    if (!this.requireFields([
+      ['language', this.selectedLanguage]
+    ])) {
+      return;
+    }
+
+    this.formBusy = 'profile';
     this.http.patch<Employee>(`${this.apiUrl}/peopleos/employees/${this.session.employee.id}/profile`, {
       preferredLanguage: this.selectedLanguage,
       profileImageUrl: this.profileImageUrl
-    }).subscribe(employee => {
+    }).pipe(finalize(() => this.formBusy = '')).subscribe(employee => {
       this.session = { ...this.session!, employee };
       this.message = this.t('profileUpdated');
       this.profileMenuOpen = false;
@@ -241,33 +331,26 @@ export class App {
   }
 
   private loadWorkspace() {
-    this.http.get<Dashboard>(`${this.apiUrl}/peopleos/dashboard`).subscribe(data => {
-      this.dashboard = data;
+    this.workspaceLoading = true;
+    forkJoin({
+      dashboard: this.http.get<Dashboard>(`${this.apiUrl}/peopleos/dashboard`),
+      attendance: this.http.get<AttendanceData>(`${this.apiUrl}/peopleos/attendance`),
+      leave: this.http.get<LeaveData>(`${this.apiUrl}/peopleos/leave`),
+      benefits: this.http.get<BenefitPlan[]>(`${this.apiUrl}/peopleos/benefits`),
+      policies: this.http.get<PolicyDocument[]>(`${this.apiUrl}/peopleos/policies`),
+      expenseClaims: this.http.get<ExpenseClaim[]>(`${this.apiUrl}/peopleos/expense`),
+      resignations: this.http.get<ResignationRequest[]>(`${this.apiUrl}/peopleos/resignations`)
+    }).pipe(finalize(() => {
       this.loading = false;
-    });
-
-    this.http.get<AttendanceData>(`${this.apiUrl}/peopleos/attendance`).subscribe(data => {
-      this.attendance = data;
-    });
-
-    this.http.get<LeaveData>(`${this.apiUrl}/peopleos/leave`).subscribe(data => {
-      this.leave = data;
-    });
-
-    this.http.get<BenefitPlan[]>(`${this.apiUrl}/peopleos/benefits`).subscribe(data => {
-      this.benefits = data;
-    });
-
-    this.http.get<PolicyDocument[]>(`${this.apiUrl}/peopleos/policies`).subscribe(data => {
-      this.policies = data;
-    });
-
-    this.http.get<ExpenseClaim[]>(`${this.apiUrl}/peopleos/expense`).subscribe(data => {
-      this.expenseClaims = data;
-    });
-
-    this.http.get<ResignationRequest[]>(`${this.apiUrl}/peopleos/resignations`).subscribe(data => {
-      this.resignations = data;
+      this.workspaceLoading = false;
+    })).subscribe(data => {
+      this.dashboard = data.dashboard;
+      this.attendance = data.attendance;
+      this.leave = data.leave;
+      this.benefits = data.benefits;
+      this.policies = data.policies;
+      this.expenseClaims = data.expenseClaims;
+      this.resignations = data.resignations;
     });
   }
 
@@ -284,6 +367,36 @@ export class App {
     const text = String(value);
     const language = this.selectedLanguage as SupportedLanguage;
     return textTranslations[language]?.[text] ?? text;
+  }
+
+  fieldError(field: string): string {
+    return this.validationErrors[field] ?? '';
+  }
+
+  isBusy(action: string): boolean {
+    return this.formBusy === action;
+  }
+
+  private requireFields(fields: Array<[string, string | number | null | undefined]>): boolean {
+    for (const [field, value] of fields) {
+      if (value === null || value === undefined || String(value).trim() === '') {
+        this.validationErrors[field] = this.t('requiredField');
+      }
+    }
+
+    return Object.keys(this.validationErrors).length === 0;
+  }
+
+  private clearInactivityTimer() {
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = null;
+    }
+  }
+
+  private expireSession() {
+    this.logout();
+    this.error = this.t('sessionExpired');
   }
 }
 
@@ -540,6 +653,11 @@ const translations = {
     version: 'Version',
     published: 'Published',
     daySuffix: 'day(s)',
+    requiredField: 'This field is required.',
+    requiredLogin: 'Email and password are required.',
+    sessionExpired: 'Session expired after 20 minutes of inactivity. Please sign in again.',
+    loadingWorkspace: 'Loading workspace...',
+    saving: 'Saving...',
     loginFailed: 'Login failed. Use one of the demo accounts below.',
     leaveSubmitted: 'Leave request submitted to line manager.',
     correctionSubmitted: 'Attendance correction submitted to line manager.',
@@ -648,6 +766,11 @@ const translations = {
     version: 'ورژن',
     published: 'شائع',
     daySuffix: 'دن',
+    requiredField: 'یہ فیلڈ ضروری ہے۔',
+    requiredLogin: 'ای میل اور پاس ورڈ ضروری ہیں۔',
+    sessionExpired: '20 منٹ غیر فعال رہنے کے بعد سیشن ختم ہو گیا۔ دوبارہ لاگ ان کریں۔',
+    loadingWorkspace: 'ورک اسپیس لوڈ ہو رہی ہے...',
+    saving: 'محفوظ ہو رہا ہے...',
     loginFailed: 'لاگ ان ناکام۔ نیچے موجود ڈیمو اکاؤنٹس استعمال کریں۔',
     leaveSubmitted: 'چھٹی درخواست لائن مینیجر کو بھیج دی گئی۔',
     correctionSubmitted: 'حاضری درستگی لائن مینیجر کو بھیج دی گئی۔',
@@ -755,6 +878,11 @@ const translations = {
     version: 'الإصدار',
     published: 'النشر',
     daySuffix: 'يوم',
+    requiredField: 'هذا الحقل مطلوب.',
+    requiredLogin: 'البريد الإلكتروني وكلمة المرور مطلوبان.',
+    sessionExpired: 'انتهت الجلسة بعد 20 دقيقة من عدم النشاط. يرجى تسجيل الدخول مرة أخرى.',
+    loadingWorkspace: 'جاري تحميل مساحة العمل...',
+    saving: 'جار الحفظ...',
     loginFailed: 'فشل تسجيل الدخول. استخدم أحد حسابات التجربة أدناه.',
     leaveSubmitted: 'تم إرسال طلب الإجازة إلى المدير المباشر.',
     correctionSubmitted: 'تم إرسال تصحيح الحضور إلى المدير المباشر.',
@@ -862,6 +990,11 @@ const translations = {
     version: 'Version',
     published: 'Publié',
     daySuffix: 'jour(s)',
+    requiredField: 'Ce champ est obligatoire.',
+    requiredLogin: 'E-mail et mot de passe sont obligatoires.',
+    sessionExpired: 'Session expirée après 20 minutes d’inactivité. Connectez-vous à nouveau.',
+    loadingWorkspace: 'Chargement...',
+    saving: 'Enregistrement...',
     loginFailed: 'Connexion échouée. Utilisez un compte démo ci-dessous.',
     leaveSubmitted: 'Demande de congé envoyée au manager.',
     correctionSubmitted: 'Correction de présence envoyée au manager.',

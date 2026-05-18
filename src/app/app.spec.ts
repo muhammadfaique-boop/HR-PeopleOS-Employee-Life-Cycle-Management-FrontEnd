@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { App } from './app';
 
 describe('App', () => {
@@ -109,6 +109,24 @@ describe('App', () => {
     expect(component.unreadNotifications).toBe(0);
     expect(component.notificationsOpen).toBeFalse();
   });
+
+  it('blocks leave submission when required fields are missing', () => {
+    component.submitLeave();
+
+    expect(component.fieldError('fromDate')).toBe('This field is required.');
+    expect(component.fieldError('leaveReason')).toBe('This field is required.');
+  });
+
+  it('auto logs out after 20 minutes of inactivity', fakeAsync(() => {
+    component.session = demoSession();
+    component.dashboard = demoDashboard();
+
+    component.resetInactivityTimer();
+    tick(20 * 60 * 1000);
+
+    expect(component.session).toBeNull();
+    expect(component.error).toContain('Session expired');
+  }));
 });
 
 function demoSession() {

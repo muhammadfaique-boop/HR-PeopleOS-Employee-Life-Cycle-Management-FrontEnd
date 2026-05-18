@@ -7,9 +7,9 @@
         <p class="login-copy">{{ t('heroCopy') }}</p>
       </div>
       <form class="login-form" (ngSubmit)="login()">
-        <label>{{ t('email') }} <input name="email" [(ngModel)]="email" /></label>
-        <label>{{ t('password') }} <input name="password" type="password" [(ngModel)]="password" /></label>
-        <button type="submit" [disabled]="loading">{{ loading ? t('signingIn') : t('signIn') }}</button>
+        <label>{{ t('email') }} <input name="email" required [(ngModel)]="email" /></label>
+        <label>{{ t('password') }} <input name="password" required type="password" [(ngModel)]="password" /></label>
+        <button type="submit" [disabled]="loading"><span *ngIf="loading" class="button-spinner"></span>{{ loading ? t('signingIn') : t('signIn') }}</button>
         <p class="error" *ngIf="error">{{ error }}</p>
       </form>
       <div class="demo-strip">
@@ -19,6 +19,10 @@
         <code>employee@peopleos.dev / Employee&#64;123</code>
       </div>
     </div>
+  </section>
+
+  <section *ngIf="session && !dashboard" class="workspace-splash">
+    <p class="loading-strip"><span class="button-spinner"></span>{{ t('loadingWorkspace') }}</p>
   </section>
 
   <ng-container *ngIf="session && dashboard">
@@ -73,10 +77,13 @@
               <button type="button" class="profile-action disabled" disabled>{{ t('activateMobileApp') }} <small>{{ t('unavailable') }}</small></button>
               <button type="button" class="profile-action disabled" disabled>{{ t('setCacheAuthority') }} <small>{{ t('unavailable') }}</small></button>
               <form *ngIf="passwordPanelOpen" class="password-form" (ngSubmit)="changePassword()">
-                <input name="currentPassword" type="password" [placeholder]="t('currentPassword')" [(ngModel)]="passwordForm.currentPassword" />
-                <input name="newPassword" type="password" [placeholder]="t('newPassword')" [(ngModel)]="passwordForm.newPassword" />
-                <input name="confirmPassword" type="password" [placeholder]="t('confirmPassword')" [(ngModel)]="passwordForm.confirmPassword" />
-                <button type="submit">{{ t('savePassword') }}</button>
+                <input name="currentPassword" required type="password" [placeholder]="t('currentPassword')" [(ngModel)]="passwordForm.currentPassword" />
+                <small class="field-error" *ngIf="fieldError('currentPassword')">{{ fieldError('currentPassword') }}</small>
+                <input name="newPassword" required type="password" [placeholder]="t('newPassword')" [(ngModel)]="passwordForm.newPassword" />
+                <small class="field-error" *ngIf="fieldError('newPassword')">{{ fieldError('newPassword') }}</small>
+                <input name="confirmPassword" required type="password" [placeholder]="t('confirmPassword')" [(ngModel)]="passwordForm.confirmPassword" />
+                <small class="field-error" *ngIf="fieldError('confirmPassword')">{{ fieldError('confirmPassword') }}</small>
+                <button type="submit" [disabled]="isBusy('password')"><span *ngIf="isBusy('password')" class="button-spinner"></span>{{ isBusy('password') ? t('saving') : t('savePassword') }}</button>
               </form>
               <button type="button" class="logout-button" (click)="logout()">{{ t('signOut') }}</button>
             </div>
@@ -84,6 +91,7 @@
         </div>
       </header>
       <p class="toast" *ngIf="message">{{ message }}</p>
+      <p class="loading-strip" *ngIf="workspaceLoading"><span class="button-spinner"></span>{{ t('loadingWorkspace') }}</p>
 
       <section *ngIf="activeView === 'overview'" class="view">
         <div class="metric-grid">
@@ -125,10 +133,13 @@
         <section class="panel">
           <div class="panel-head"><h3>{{ t('attendanceCorrectionSpecific') }}</h3><span>{{ t('lineManagerReview') }}</span></div>
           <form class="compact-form" (ngSubmit)="submitCorrection()">
-            <label>{{ t('correctionDate') }} <input name="correctionDate" type="date" [(ngModel)]="correctionForm.workDate" /></label>
-            <input name="requestedChange" [placeholder]="t('requestedChange')" [(ngModel)]="correctionForm.requestedChange" />
-            <textarea name="correctionReason" [placeholder]="t('reason')" [(ngModel)]="correctionForm.reason"></textarea>
-            <button type="submit">{{ t('submitCorrection') }}</button>
+            <label>{{ t('correctionDate') }} <input name="correctionDate" required type="date" [(ngModel)]="correctionForm.workDate" /></label>
+            <small class="field-error" *ngIf="fieldError('correctionDate')">{{ fieldError('correctionDate') }}</small>
+            <input name="requestedChange" required [placeholder]="t('requestedChange')" [(ngModel)]="correctionForm.requestedChange" />
+            <small class="field-error" *ngIf="fieldError('requestedChange')">{{ fieldError('requestedChange') }}</small>
+            <textarea name="correctionReason" required [placeholder]="t('reason')" [(ngModel)]="correctionForm.reason"></textarea>
+            <small class="field-error" *ngIf="fieldError('correctionReason')">{{ fieldError('correctionReason') }}</small>
+            <button type="submit" [disabled]="isBusy('correction')"><span *ngIf="isBusy('correction')" class="button-spinner"></span>{{ isBusy('correction') ? t('saving') : t('submitCorrection') }}</button>
           </form>
           <article *ngFor="let item of attendance?.corrections" class="approval"><span>{{ item.workDate | date }}</span><strong>{{ translateText(item.requestedChange) }}</strong><small>{{ translateText(item.status) }} - {{ item.approver }}</small></article>
         </section>
@@ -139,10 +150,12 @@
           <div class="panel-head"><h3>{{ t('applyLeave') }}</h3><span>{{ t('calendarDates') }}</span></div>
           <form class="compact-form" (ngSubmit)="submitLeave()">
             <select name="leaveType" [(ngModel)]="leaveForm.leaveType"><option value="Casual Leave">{{ translateText('Casual Leave') }}</option><option value="Sick Leave">{{ translateText('Sick Leave') }}</option><option value="Annual Leave">{{ translateText('Annual Leave') }}</option><option value="Work from Home">{{ translateText('Work from Home') }}</option><option value="Unpaid">{{ translateText('Unpaid') }}</option></select>
-            <div class="form-pair"><label>{{ t('fromDate') }} <input name="fromDate" type="date" [(ngModel)]="leaveForm.fromDate" /></label><label>{{ t('toDate') }} <input name="toDate" type="date" [(ngModel)]="leaveForm.toDate" /></label></div>
-            <textarea name="leaveReason" [placeholder]="t('reason')" [(ngModel)]="leaveForm.reason"></textarea>
-            <input name="leaveContact" [placeholder]="t('contactDuringLeave')" [(ngModel)]="leaveForm.contactDuringLeave" />
-            <button type="submit">{{ t('submitLeave') }}</button>
+            <div class="form-pair"><label>{{ t('fromDate') }} <input name="fromDate" required type="date" [(ngModel)]="leaveForm.fromDate" /><small class="field-error" *ngIf="fieldError('fromDate')">{{ fieldError('fromDate') }}</small></label><label>{{ t('toDate') }} <input name="toDate" required type="date" [(ngModel)]="leaveForm.toDate" /><small class="field-error" *ngIf="fieldError('toDate')">{{ fieldError('toDate') }}</small></label></div>
+            <textarea name="leaveReason" required [placeholder]="t('reason')" [(ngModel)]="leaveForm.reason"></textarea>
+            <small class="field-error" *ngIf="fieldError('leaveReason')">{{ fieldError('leaveReason') }}</small>
+            <input name="leaveContact" required [placeholder]="t('contactDuringLeave')" [(ngModel)]="leaveForm.contactDuringLeave" />
+            <small class="field-error" *ngIf="fieldError('leaveContact')">{{ fieldError('leaveContact') }}</small>
+            <button type="submit" [disabled]="isBusy('leave')"><span *ngIf="isBusy('leave')" class="button-spinner"></span>{{ isBusy('leave') ? t('saving') : t('submitLeave') }}</button>
           </form>
         </section>
         <section class="panel">
@@ -160,17 +173,17 @@
       </section>
 
       <section *ngIf="activeView === 'expense'" class="view two-column">
-        <section class="panel"><div class="panel-head"><h3>{{ t('expenseClaim') }}</h3><span>{{ t('medicalOpd') }}</span></div><form class="compact-form" (ngSubmit)="submitExpense()"><select name="claimType" [(ngModel)]="expenseForm.claimType"><option value="Medical Expense OPD">{{ translateText('Medical Expense OPD') }}</option><option value="Business Expense">{{ translateText('Business Expense') }}</option></select><select name="expenseCategory" [(ngModel)]="expenseForm.category"><option value="Medical OPD">{{ translateText('Medical OPD') }}</option><option value="Business Expense">{{ translateText('Business Expense') }}</option></select><div class="form-pair"><input name="expenseDate" type="date" [(ngModel)]="expenseForm.expenseDate" /><input name="amount" type="number" [placeholder]="t('amount')" [(ngModel)]="expenseForm.amount" /></div><textarea name="expenseDescription" [placeholder]="t('claimDescription')" [(ngModel)]="expenseForm.description"></textarea><button type="submit">{{ t('submitClaim') }}</button></form></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('expenseClaim') }}</h3><span>{{ t('medicalOpd') }}</span></div><form class="compact-form" (ngSubmit)="submitExpense()"><select name="claimType" [(ngModel)]="expenseForm.claimType"><option value="Medical Expense OPD">{{ translateText('Medical Expense OPD') }}</option><option value="Business Expense">{{ translateText('Business Expense') }}</option></select><select name="expenseCategory" [(ngModel)]="expenseForm.category"><option value="Medical OPD">{{ translateText('Medical OPD') }}</option><option value="Business Expense">{{ translateText('Business Expense') }}</option></select><div class="form-pair"><label><input name="expenseDate" required type="date" [(ngModel)]="expenseForm.expenseDate" /><small class="field-error" *ngIf="fieldError('expenseDate')">{{ fieldError('expenseDate') }}</small></label><label><input name="amount" required type="number" [placeholder]="t('amount')" [(ngModel)]="expenseForm.amount" /><small class="field-error" *ngIf="fieldError('amount')">{{ fieldError('amount') }}</small></label></div><textarea name="expenseDescription" required [placeholder]="t('claimDescription')" [(ngModel)]="expenseForm.description"></textarea><small class="field-error" *ngIf="fieldError('expenseDescription')">{{ fieldError('expenseDescription') }}</small><button type="submit" [disabled]="isBusy('expense')"><span *ngIf="isBusy('expense')" class="button-spinner"></span>{{ isBusy('expense') ? t('saving') : t('submitClaim') }}</button></form></section>
         <section class="panel"><div class="panel-head"><h3>{{ t('claimHistory') }}</h3><span>{{ t('lineManagerRouted') }}</span></div><article *ngFor="let item of expenseClaims" class="approval"><span>{{ translateText(item.category) }}</span><strong>{{ translateText(item.claimType) }} - {{ item.amount | currency }}</strong><small>{{ translateText(item.status) }} - {{ item.lineManager }}</small></article></section>
       </section>
 
       <section *ngIf="activeView === 'resignation'" class="view two-column">
-        <section class="panel"><div class="panel-head"><h3>{{ t('resignationRequest') }}</h3><span>{{ t('offboarding') }}</span></div><form class="compact-form" (ngSubmit)="submitResignation()"><input name="lastWorkingDate" type="date" [(ngModel)]="resignationForm.lastWorkingDate" /><textarea name="resignationReason" [placeholder]="t('reason')" [(ngModel)]="resignationForm.reason"></textarea><button type="submit">{{ t('submitResignation') }}</button></form></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('resignationRequest') }}</h3><span>{{ t('offboarding') }}</span></div><form class="compact-form" (ngSubmit)="submitResignation()"><input name="lastWorkingDate" required type="date" [(ngModel)]="resignationForm.lastWorkingDate" /><small class="field-error" *ngIf="fieldError('lastWorkingDate')">{{ fieldError('lastWorkingDate') }}</small><textarea name="resignationReason" required [placeholder]="t('reason')" [(ngModel)]="resignationForm.reason"></textarea><small class="field-error" *ngIf="fieldError('resignationReason')">{{ fieldError('resignationReason') }}</small><button type="submit" [disabled]="isBusy('resignation')"><span *ngIf="isBusy('resignation')" class="button-spinner"></span>{{ isBusy('resignation') ? t('saving') : t('submitResignation') }}</button></form></section>
         <section class="panel"><div class="panel-head"><h3>{{ t('resignationHistory') }}</h3><span>{{ t('clearanceWorkflow') }}</span></div><article *ngFor="let item of resignations" class="approval"><span>{{ translateText(item.status) }}</span><strong>{{ t('lastWorkingDay') }} {{ item.lastWorkingDate | date }}</strong><small>{{ translateText(item.reason) }} - {{ item.lineManager }}</small></article></section>
       </section>
 
       <section *ngIf="activeView === 'profile'" class="view two-column">
-        <section class="panel"><div class="panel-head"><h3>{{ t('profileManagement') }}</h3><span>{{ t('languageAndPicture') }}</span></div><form class="compact-form" (ngSubmit)="updateProfile()"><label>{{ t('language') }}<select name="language" [(ngModel)]="selectedLanguage"><option>English</option><option>Urdu</option><option>Arabic</option><option>French</option></select></label><input name="profileImageUrl" [placeholder]="t('profileImageUrl')" [(ngModel)]="profileImageUrl" /><button type="submit">{{ t('updateProfile') }}</button></form></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('profileManagement') }}</h3><span>{{ t('languageAndPicture') }}</span></div><form class="compact-form" (ngSubmit)="updateProfile()"><label>{{ t('language') }}<select name="language" required [(ngModel)]="selectedLanguage"><option>English</option><option>Urdu</option><option>Arabic</option><option>French</option></select><small class="field-error" *ngIf="fieldError('language')">{{ fieldError('language') }}</small></label><input name="profileImageUrl" [placeholder]="t('profileImageUrl')" [(ngModel)]="profileImageUrl" /><button type="submit" [disabled]="isBusy('profile')"><span *ngIf="isBusy('profile')" class="button-spinner"></span>{{ isBusy('profile') ? t('saving') : t('updateProfile') }}</button></form></section>
         <section class="panel"><div class="profile-preview"><img *ngIf="session.employee.profileImageUrl" [src]="session.employee.profileImageUrl" alt="Profile preview" /><strong>{{ session.employee.fullName }}</strong><span>{{ session.employee.preferredLanguage }}</span></div></section>
       </section>
 
