@@ -99,6 +99,16 @@ describe('App', () => {
     expect(component.notifications.length).toBe(2);
     expect(component.notifications[0].title).toBe('Approval required');
   });
+
+  it('marks approval notifications as read', () => {
+    component.dashboard = demoDashboard();
+    component.notificationsOpen = true;
+
+    component.markNotificationsRead();
+
+    expect(component.unreadNotifications).toBe(0);
+    expect(component.notificationsOpen).toBeFalse();
+  });
 });
 
 function demoSession() {

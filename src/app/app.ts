@@ -28,6 +28,7 @@ export class App {
   activeView: ViewKey = 'overview';
   message = '';
   notificationsOpen = false;
+  readNotificationKeys = new Set<string>();
   profileMenuOpen = false;
   passwordPanelOpen = false;
   selectedLanguage = 'English';
@@ -105,6 +106,9 @@ export class App {
   }
 
   markNotificationsRead() {
+    this.notifications
+      .filter(note => note.tone === 'urgent')
+      .forEach(note => this.readNotificationKeys.add(note.key));
     this.notificationsOpen = false;
   }
 
@@ -165,12 +169,14 @@ export class App {
     }
 
     const approvals = this.dashboard.approvals.map(item => ({
+      key: `approval-${item.id}-${item.status}`,
       title: this.t('approvalRequired'),
       body: `${this.translateText(item.subject)} - ${this.translateText(item.status)}`,
       tone: 'urgent' as NotificationTone
     }));
 
-    const activity = this.dashboard.recentActivity.map(item => ({
+    const activity = this.dashboard.recentActivity.map((item, index) => ({
+      key: `activity-${index}-${item}`,
       title: this.t('recentActivity'),
       body: this.translateText(item),
       tone: 'info' as NotificationTone
@@ -180,7 +186,7 @@ export class App {
   }
 
   get unreadNotifications() {
-    return this.dashboard?.approvals.length ?? 0;
+    return this.notifications.filter(note => note.tone === 'urgent' && !this.readNotificationKeys.has(note.key)).length;
   }
 
   submitLeave() {
@@ -427,6 +433,7 @@ interface ResignationRequest {
 type NotificationTone = 'urgent' | 'info';
 
 interface NotificationItem {
+  key: string;
   title: string;
   body: string;
   tone: NotificationTone;
