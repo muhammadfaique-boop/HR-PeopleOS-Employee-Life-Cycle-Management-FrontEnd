@@ -12,6 +12,7 @@ import {
   AttendanceData,
   BenefitPlan,
   Dashboard,
+  EmployeeNotification,
   ExpenseClaim,
   LeaveData,
   NotificationItem,
@@ -56,16 +57,29 @@ export class App implements OnDestroy {
   policies: PolicyDocument[] = [];
   expenseClaims: ExpenseClaim[] = [];
   resignations: ResignationRequest[] = [];
+  employeeNotifications: EmployeeNotification[] = [];
   activeView: ViewKey = 'overview';
   message = '';
   notificationsOpen = false;
   readNotificationKeys = new Set<string>();
   profileMenuOpen = false;
   passwordPanelOpen = false;
+  resetPasswordPanelOpen = false;
+  loginPasswordVisible = false;
+  resetPasswordVisible = false;
+  resetConfirmPasswordVisible = false;
+  currentPasswordVisible = false;
+  newPasswordVisible = false;
+  confirmPasswordVisible = false;
   leaveFormVisible = true;
   readonly loginForm = this.fb.group({
     email: ['employee@peopleos.dev', Validators.required],
     password: ['Employee@123', Validators.required]
+  });
+  readonly resetPasswordForm = this.fb.group({
+    email: ['employee@peopleos.dev', Validators.required],
+    newPassword: ['', Validators.required],
+    confirmPassword: ['', Validators.required]
   });
   readonly passwordForm = this.fb.group({
     currentPassword: ['', Validators.required],
@@ -182,9 +196,11 @@ export class App implements OnDestroy {
     this.policies = [];
     this.expenseClaims = [];
     this.resignations = [];
+    this.employeeNotifications = [];
     this.activeView = 'overview';
     this.profileMenuOpen = false;
     this.passwordPanelOpen = false;
+    this.resetPasswordPanelOpen = false;
     this.notificationsOpen = false;
     this.readNotificationKeys.clear();
     this.validationErrors = {};
@@ -229,9 +245,12 @@ export class App implements OnDestroy {
   }
 
   markNotificationsRead() {
-    this.notifications
-      .filter(note => note.tone === 'urgent')
-      .forEach(note => this.readNotificationKeys.add(note.key));
+    const employeeId = this.session?.employee.id;
+    this.notifications.forEach(note => this.readNotificationKeys.add(note.key));
+    this.employeeNotifications = this.employeeNotifications.map(note => ({ ...note, isRead: true }));
+    if (employeeId) {
+      this.peopleOs.markNotificationsRead(employeeId).subscribe();
+    }
     this.notificationsOpen = false;
   }
 
@@ -242,6 +261,70 @@ export class App implements OnDestroy {
 
   showPasswordPanel() {
     this.passwordPanelOpen = !this.passwordPanelOpen;
+  }
+
+  toggleResetPasswordPanel() {
+    this.resetPasswordPanelOpen = !this.resetPasswordPanelOpen;
+    if (this.resetPasswordPanelOpen) {
+      this.resetPasswordForm.patchValue({ email: this.loginForm.controls.email.value });
+    }
+  }
+
+  togglePasswordVisibility(field: 'login' | 'reset' | 'resetConfirm' | 'current' | 'new' | 'confirm') {
+    if (field === 'login') {
+      this.loginPasswordVisible = !this.loginPasswordVisible;
+    } else if (field === 'reset') {
+      this.resetPasswordVisible = !this.resetPasswordVisible;
+    } else if (field === 'resetConfirm') {
+      this.resetConfirmPasswordVisible = !this.resetConfirmPasswordVisible;
+    } else if (field === 'current') {
+      this.currentPasswordVisible = !this.currentPasswordVisible;
+    } else if (field === 'new') {
+      this.newPasswordVisible = !this.newPasswordVisible;
+    } else {
+      this.confirmPasswordVisible = !this.confirmPasswordVisible;
+    }
+  }
+
+  resetPassword() {
+    this.validationErrors = {};
+    const resetForm = this.resetPasswordForm.getRawValue();
+    if (!this.requireFields([
+      ['resetEmail', resetForm.email],
+      ['resetNewPassword', resetForm.newPassword],
+      ['resetConfirmPassword', resetForm.confirmPassword]
+    ])) {
+      return;
+    }
+
+    if (resetForm.newPassword !== resetForm.confirmPassword) {
+      this.error = this.t('passwordMismatch');
+      return;
+    }
+
+    this.formBusy = 'resetPassword';
+    this.peopleOs.resetPassword({
+      email: resetForm.email,
+      newPassword: resetForm.newPassword
+    }).pipe(finalize(() => this.formBusy = '')).subscribe({
+      next: () => {
+        this.loginForm.patchValue({
+          email: resetForm.email,
+          password: resetForm.newPassword
+        });
+        this.resetPasswordForm.reset({
+          email: resetForm.email,
+          newPassword: '',
+          confirmPassword: ''
+        });
+        this.resetPasswordPanelOpen = false;
+        this.error = '';
+        this.showMessage(this.t('passwordReset'));
+      },
+      error: () => {
+        this.error = this.t('passwordResetFailed');
+      }
+    });
   }
 
   uploadImage(event: Event) {
@@ -329,6 +412,15 @@ export class App implements OnDestroy {
       return [];
     }
 
+    const employeeNotifications = this.employeeNotifications.map(item => ({
+      key: `employee-notification-${item.id}-${item.isRead}`,
+      title: this.translateText(item.title),
+      body: this.translateText(item.body),
+      tone: item.tone,
+      isRead: item.isRead,
+      employeeNotificationId: item.id
+    }));
+
     const approvals = this.dashboard.approvals.map(item => ({
       key: `approval-${item.id}-${item.status}`,
       title: this.t('approvalRequired'),
@@ -341,14 +433,15 @@ export class App implements OnDestroy {
       key: `activity-${index}-${item}`,
       title: this.t('recentActivity'),
       body: this.translateText(item),
-      tone: 'info' as NotificationTone
+      tone: 'info' as NotificationTone,
+      isRead: true
     }));
 
-    return [...approvals, ...activity].slice(0, 6);
+    return [...employeeNotifications, ...approvals, ...activity].slice(0, 10);
   }
 
   get unreadNotifications() {
-    return this.notifications.filter(note => note.tone === 'urgent' && !this.readNotificationKeys.has(note.key)).length;
+    return this.notifications.filter(note => !note.isRead && !this.readNotificationKeys.has(note.key)).length;
   }
 
   decideApproval(item: ApprovalTask, decision: ApprovalDecision) {
@@ -567,7 +660,7 @@ export class App implements OnDestroy {
 
   private loadWorkspace() {
     this.workspaceLoading = true;
-    this.peopleOs.loadWorkspace().pipe(finalize(() => {
+    this.peopleOs.loadWorkspace(this.session?.employee.id ?? 2).pipe(finalize(() => {
       this.loading = false;
       this.workspaceLoading = false;
     })).subscribe(data => {
@@ -578,6 +671,7 @@ export class App implements OnDestroy {
       this.policies = data.policies;
       this.expenseClaims = data.expenseClaims;
       this.resignations = data.resignations;
+      this.employeeNotifications = data.employeeNotifications;
     });
   }
 
@@ -783,6 +877,11 @@ const translations = {
     password: 'Password',
     signIn: 'Sign in',
     signingIn: 'Signing in...',
+    resetPassword: 'Reset password',
+    passwordReset: 'Password reset successfully. Sign in with the new password.',
+    passwordResetFailed: 'Password reset failed. Check the email and try again.',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     demoUsers: 'Demo users',
     dashboard: 'Dashboard',
     employeeData: 'Employee Data',

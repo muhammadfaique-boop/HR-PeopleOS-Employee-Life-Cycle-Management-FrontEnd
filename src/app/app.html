@@ -10,9 +10,38 @@
       </div>
       <form class="login-form" [formGroup]="loginForm" (ngSubmit)="login()">
         <app-form-field [label]="t('email')"><input pInputText formControlName="email" required /></app-form-field>
-        <app-form-field [label]="t('password')"><input pInputText formControlName="password" required type="password" /></app-form-field>
+        <app-form-field [label]="t('password')">
+          <div class="password-field">
+            <input pInputText formControlName="password" required [type]="loginPasswordVisible ? 'text' : 'password'" />
+            <button type="button" class="password-toggle" [attr.aria-label]="loginPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('login')">
+              <i [class]="loginPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            </button>
+          </div>
+        </app-form-field>
         <button pButton type="submit" [disabled]="loading"><span *ngIf="loading" class="button-spinner"></span>{{ loading ? t('signingIn') : t('signIn') }}</button>
+        <button type="button" class="reset-link" (click)="toggleResetPasswordPanel()">{{ t('resetPassword') }}</button>
+        <div *ngIf="resetPasswordPanelOpen" class="reset-password-form" [formGroup]="resetPasswordForm">
+          <app-form-field [label]="t('email')" [error]="fieldError('resetEmail')"><input pInputText formControlName="email" required /></app-form-field>
+          <app-form-field [label]="t('newPassword')" [error]="fieldError('resetNewPassword')">
+            <div class="password-field">
+              <input pInputText formControlName="newPassword" required [type]="resetPasswordVisible ? 'text' : 'password'" />
+              <button type="button" class="password-toggle" [attr.aria-label]="resetPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('reset')">
+                <i [class]="resetPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </div>
+          </app-form-field>
+          <app-form-field [label]="t('confirmPassword')" [error]="fieldError('resetConfirmPassword')">
+            <div class="password-field">
+              <input pInputText formControlName="confirmPassword" required [type]="resetConfirmPasswordVisible ? 'text' : 'password'" />
+              <button type="button" class="password-toggle" [attr.aria-label]="resetConfirmPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('resetConfirm')">
+                <i [class]="resetConfirmPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </div>
+          </app-form-field>
+          <button pButton type="button" [disabled]="isBusy('resetPassword')" (click)="resetPassword()"><span *ngIf="isBusy('resetPassword')" class="button-spinner"></span>{{ isBusy('resetPassword') ? t('saving') : t('savePassword') }}</button>
+        </div>
         <p class="error" *ngIf="error">{{ error }}</p>
+        <p class="success" *ngIf="message">{{ message }}</p>
       </form>
       <div class="demo-strip">
         <span>{{ t('demoUsers') }}</span>
@@ -84,9 +113,24 @@
               <label class="profile-action">{{ t('uploadImage') }}<input type="file" accept="image/*" (change)="uploadImage($event)" /></label>
               <button type="button" class="profile-action" (click)="showPasswordPanel()">{{ t('changePassword') }}</button>
               <form *ngIf="passwordPanelOpen" class="password-form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
-                <app-form-field [error]="fieldError('currentPassword')"><input pInputText formControlName="currentPassword" required type="password" [placeholder]="t('currentPassword')" /></app-form-field>
-                <app-form-field [error]="fieldError('newPassword')"><input pInputText formControlName="newPassword" required type="password" [placeholder]="t('newPassword')" /></app-form-field>
-                <app-form-field [error]="fieldError('confirmPassword')"><input pInputText formControlName="confirmPassword" required type="password" [placeholder]="t('confirmPassword')" /></app-form-field>
+                <app-form-field [error]="fieldError('currentPassword')">
+                  <div class="password-field">
+                    <input pInputText formControlName="currentPassword" required [type]="currentPasswordVisible ? 'text' : 'password'" [placeholder]="t('currentPassword')" />
+                    <button type="button" class="password-toggle" [attr.aria-label]="currentPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('current')"><i [class]="currentPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i></button>
+                  </div>
+                </app-form-field>
+                <app-form-field [error]="fieldError('newPassword')">
+                  <div class="password-field">
+                    <input pInputText formControlName="newPassword" required [type]="newPasswordVisible ? 'text' : 'password'" [placeholder]="t('newPassword')" />
+                    <button type="button" class="password-toggle" [attr.aria-label]="newPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('new')"><i [class]="newPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i></button>
+                  </div>
+                </app-form-field>
+                <app-form-field [error]="fieldError('confirmPassword')">
+                  <div class="password-field">
+                    <input pInputText formControlName="confirmPassword" required [type]="confirmPasswordVisible ? 'text' : 'password'" [placeholder]="t('confirmPassword')" />
+                    <button type="button" class="password-toggle" [attr.aria-label]="confirmPasswordVisible ? t('hidePassword') : t('showPassword')" (click)="togglePasswordVisibility('confirm')"><i [class]="confirmPasswordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"></i></button>
+                  </div>
+                </app-form-field>
                 <button pButton type="submit" [disabled]="isBusy('password')"><span *ngIf="isBusy('password')" class="button-spinner"></span>{{ isBusy('password') ? t('saving') : t('savePassword') }}</button>
               </form>
               <button type="button" class="logout-button" (click)="logout()">{{ t('signOut') }}</button>

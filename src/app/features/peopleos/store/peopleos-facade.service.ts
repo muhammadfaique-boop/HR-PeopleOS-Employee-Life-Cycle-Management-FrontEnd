@@ -7,6 +7,7 @@ import {
   AttendanceData,
   BenefitPlan,
   Dashboard,
+  EmployeeNotification,
   ExpenseClaim,
   LeaveData,
   LeaveRequest,
@@ -19,6 +20,7 @@ import { AttendanceApiService } from '../../../services/attendance/attendance-ap
 import { AuthApiService } from '../../../services/auth/auth-api.service';
 import { ChangePasswordRequestDto } from '../../auth/change-password-model/change-password-request.dto';
 import { LoginRequestDto } from '../../auth/login-model/login-request.dto';
+import { ResetPasswordRequestDto } from '../../auth/reset-password-model/reset-password-request.dto';
 import { BenefitsApiService } from '../../../services/benefits/benefits-api.service';
 import { DashboardApiService } from '../../../services/dashboard/dashboard-api.service';
 import { ExpenseApiService } from '../../../services/expense/expense-api.service';
@@ -27,6 +29,7 @@ import { ProfileUpdateRequestDto } from '../../people/profile-update-model/profi
 import { PeopleApiService } from '../../../services/people/people-api.service';
 import { PoliciesApiService } from '../../../services/policies/policies-api.service';
 import { ResignationApiService } from '../../../services/resignation/resignation-api.service';
+import { NotificationsApiService } from '../../../services/notifications/notifications-api.service';
 
 export interface PeopleOsWorkspaceResponse {
   dashboard: Dashboard;
@@ -36,6 +39,7 @@ export interface PeopleOsWorkspaceResponse {
   policies: PolicyDocument[];
   expenseClaims: ExpenseClaim[];
   resignations: ResignationRequest[];
+  employeeNotifications: EmployeeNotification[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,12 +54,13 @@ export class PeopleOsFacade {
   private readonly peopleApi = inject(PeopleApiService);
   private readonly policiesApi = inject(PoliciesApiService);
   private readonly resignationApi = inject(ResignationApiService);
+  private readonly notificationsApi = inject(NotificationsApiService);
 
   login(request: LoginRequestDto): Observable<Session> {
     return this.authApi.login(request);
   }
 
-  loadWorkspace(): Observable<PeopleOsWorkspaceResponse> {
+  loadWorkspace(employeeId = 2): Observable<PeopleOsWorkspaceResponse> {
     return forkJoin({
       dashboard: this.dashboardApi.getDashboard(),
       attendance: this.attendanceApi.getAttendance(),
@@ -63,12 +68,17 @@ export class PeopleOsFacade {
       benefits: this.benefitsApi.getBenefits(),
       policies: this.policiesApi.getPolicies(),
       expenseClaims: this.expenseApi.getClaims(),
-      resignations: this.resignationApi.getResignations()
+      resignations: this.resignationApi.getResignations(),
+      employeeNotifications: this.notificationsApi.getNotifications(employeeId)
     });
   }
 
   changePassword(request: ChangePasswordRequestDto): Observable<unknown> {
     return this.authApi.changePassword(request);
+  }
+
+  resetPassword(request: ResetPasswordRequestDto): Observable<unknown> {
+    return this.authApi.resetPassword(request);
   }
 
   submitLeave(request: unknown): Observable<LeaveRequest> {
@@ -89,6 +99,10 @@ export class PeopleOsFacade {
 
   decideApproval(approvalId: number, decision: ApprovalDecision): Observable<ApprovalTask> {
     return this.dashboardApi.decideApproval(approvalId, decision);
+  }
+
+  markNotificationsRead(employeeId: number): Observable<void> {
+    return this.notificationsApi.markAllRead(employeeId);
   }
 
   updateProfile(employeeId: number, request: ProfileUpdateRequestDto) {

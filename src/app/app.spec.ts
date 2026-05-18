@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { App } from './app';
-import { Session } from './shared/models/peopleos.models';
+import { EmployeeNotification, Session } from './shared/models/peopleos.models';
 
 describe('App', () => {
   let fixture: ComponentFixture<App>;
@@ -56,6 +56,7 @@ describe('App', () => {
     ]);
     http.expectOne('http://localhost:5265/api/peopleos/expense').flush([]);
     http.expectOne('http://localhost:5265/api/peopleos/resignations').flush([]);
+    http.expectOne('http://localhost:5265/api/peopleos/notifications?employeeId=2').flush(demoEmployeeNotifications());
 
     fixture.detectChanges();
 
@@ -73,6 +74,33 @@ describe('App', () => {
 
     expect(component.loading).toBeFalse();
     expect(component.error).toContain('Login failed');
+  });
+
+  it('toggles login password visibility and resets password', () => {
+    component.togglePasswordVisibility('login');
+    fixture.detectChanges();
+
+    const passwordInput = fixture.nativeElement.querySelector('input[formcontrolname="password"]') as HTMLInputElement;
+    expect(passwordInput.type).toBe('text');
+
+    component.resetPasswordForm.setValue({
+      email: 'employee@peopleos.dev',
+      newPassword: 'Employee@Reset123',
+      confirmPassword: 'Employee@Reset123'
+    });
+
+    component.resetPassword();
+
+    const request = http.expectOne('http://localhost:5265/api/auth/reset-password');
+    expect(request.request.body).toEqual({
+      email: 'employee@peopleos.dev',
+      newPassword: 'Employee@Reset123'
+    });
+    request.flush({ message: 'Password reset successfully.' });
+
+    expect(component.loginForm.controls.password.value).toBe('Employee@Reset123');
+    expect(component.resetPasswordPanelOpen).toBeFalse();
+    expect(component.message).toContain('Password reset successfully');
   });
 
   it('switches module views and logs out cleanly', () => {
@@ -112,6 +140,15 @@ describe('App', () => {
 
     expect(component.unreadNotifications).toBe(0);
     expect(component.notificationsOpen).toBeFalse();
+  });
+
+  it('shows approval decision notifications for the employee', () => {
+    component.dashboard = demoDashboard();
+    component.employeeNotifications = demoEmployeeNotifications();
+
+    expect(component.unreadNotifications).toBe(2);
+    expect(component.notifications[0].title).toBe('Leave request rejected');
+    expect(component.notifications[0].body).toContain('has been rejected');
   });
 
   it('blocks leave submission when required fields are missing', () => {
@@ -339,6 +376,20 @@ function demoLeave() {
   };
 }
 
+function demoEmployeeNotifications(): EmployeeNotification[] {
+  return [
+    {
+      id: 1,
+      employeeId: 2,
+      title: 'Leave request rejected',
+      body: 'Annual Leave - Muhammad Faique has been rejected by your line manager.',
+      tone: 'urgent',
+      isRead: false,
+      createdAt: '2026-05-18T14:30:00Z'
+    }
+  ];
+}
+
 function flushWorkspaceRequests(http: HttpTestingController) {
   http.expectOne('http://localhost:5265/api/peopleos/dashboard').flush(demoDashboard());
   http.expectOne('http://localhost:5265/api/peopleos/attendance').flush(demoAttendance());
@@ -347,4 +398,5 @@ function flushWorkspaceRequests(http: HttpTestingController) {
   http.expectOne('http://localhost:5265/api/peopleos/policies').flush([]);
   http.expectOne('http://localhost:5265/api/peopleos/expense').flush([]);
   http.expectOne('http://localhost:5265/api/peopleos/resignations').flush([]);
+  http.expectOne('http://localhost:5265/api/peopleos/notifications?employeeId=2').flush(demoEmployeeNotifications());
 }

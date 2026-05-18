@@ -6,4 +6,16 @@ export interface NotificationItem {
   body: string;
   tone: NotificationTone;
   approvalId?: number;
+  isRead?: boolean;
+  employeeNotificationId?: number;
+}
+
+export interface EmployeeNotification {
+  id: number;
+  employeeId: number;
+  title: string;
+  body: string;
+  tone: NotificationTone;
+  isRead: boolean;
+  createdAt: string;
 }
