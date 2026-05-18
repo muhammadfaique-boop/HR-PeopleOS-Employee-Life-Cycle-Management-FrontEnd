@@ -19,6 +19,8 @@ import {
   NotificationItem,
   NotificationTone,
   PasswordFormModel,
+  PermissionKey,
+  PermissionScope,
   PolicyDocument,
   ResignationFormModel,
   ResignationRequest,
@@ -98,6 +100,21 @@ export class App implements OnDestroy {
     lastWorkingDate: '',
     reason: ''
   };
+  private readonly viewPermissions: Record<ViewKey, PermissionKey> = {
+    overview: 'attendance.read',
+    people: 'employee.read',
+    attendance: 'attendance.read',
+    leave: 'leave.read',
+    benefits: 'benefit.read',
+    expense: 'expense.read',
+    resignation: 'resignation.read',
+    profile: 'employee.update',
+    policies: 'policy.read'
+  };
+  readonly leaveTypeOptions = ['Casual Leave', 'Sick Leave', 'Annual Leave', 'Work from Home', 'Unpaid'].map(value => ({ label: value, value }));
+  readonly expenseClaimOptions = ['Medical Expense OPD', 'Business Expense'].map(value => ({ label: value, value }));
+  readonly expenseCategoryOptions = ['Medical OPD', 'Business Expense'].map(value => ({ label: value, value }));
+  readonly languageOptions: SupportedLanguage[] = ['English', 'Urdu', 'Arabic', 'French'];
 
   @HostListener('document:mousemove')
   @HostListener('document:keydown')
@@ -154,6 +171,11 @@ export class App implements OnDestroy {
   }
 
   selectView(view: ViewKey) {
+    if (!this.canOpenView(view)) {
+      this.message = this.t('permissionDenied');
+      return;
+    }
+
     this.activeView = view;
     this.notificationsOpen = false;
     this.profileMenuOpen = false;
@@ -161,7 +183,7 @@ export class App implements OnDestroy {
 
   openQuickAction(target: string) {
     const allowedViews: ViewKey[] = ['overview', 'people', 'attendance', 'leave', 'benefits', 'expense', 'resignation', 'profile', 'policies'];
-    if (allowedViews.includes(target as ViewKey)) {
+    if (allowedViews.includes(target as ViewKey) && this.canOpenView(target as ViewKey)) {
       this.selectView(target as ViewKey);
     }
   }
@@ -300,6 +322,11 @@ export class App implements OnDestroy {
   }
 
   submitLeave() {
+    if (!this.hasPermission('leave.create')) {
+      this.message = this.t('permissionDenied');
+      return;
+    }
+
     this.validationErrors = {};
     if (!this.requireFields([
       ['fromDate', this.leaveForm.fromDate],
@@ -319,6 +346,11 @@ export class App implements OnDestroy {
   }
 
   submitCorrection() {
+    if (!this.hasPermission('attendance.correct')) {
+      this.message = this.t('permissionDenied');
+      return;
+    }
+
     this.validationErrors = {};
     if (!this.requireFields([
       ['correctionDate', this.correctionForm.workDate],
@@ -337,6 +369,11 @@ export class App implements OnDestroy {
   }
 
   submitExpense() {
+    if (!this.hasPermission('expense.create')) {
+      this.message = this.t('permissionDenied');
+      return;
+    }
+
     this.validationErrors = {};
     if (!this.requireFields([
       ['expenseDate', this.expenseForm.expenseDate],
@@ -355,6 +392,11 @@ export class App implements OnDestroy {
   }
 
   submitResignation() {
+    if (!this.hasPermission('resignation.create')) {
+      this.message = this.t('permissionDenied');
+      return;
+    }
+
     this.validationErrors = {};
     if (!this.requireFields([
       ['lastWorkingDate', this.resignationForm.lastWorkingDate],
@@ -373,6 +415,11 @@ export class App implements OnDestroy {
 
   updateProfile() {
     if (!this.session) {
+      return;
+    }
+
+    if (!this.hasPermission('employee.update')) {
+      this.message = this.t('permissionDenied');
       return;
     }
 
@@ -395,7 +442,37 @@ export class App implements OnDestroy {
   }
 
   downloadAttendance(format: 'excel' | 'pdf') {
+    if (!this.hasPermission('attendance.read')) {
+      this.message = this.t('permissionDenied');
+      return;
+    }
+
     this.peopleOs.downloadAttendance(format, this.session?.employee.id ?? 2);
+  }
+
+  canOpenView(view: ViewKey): boolean {
+    return this.hasPermission(this.viewPermissions[view]);
+  }
+
+  canOpenTarget(target: string): boolean {
+    return Boolean(this.viewPermissions[target as ViewKey]) && this.canOpenView(target as ViewKey);
+  }
+
+  hasPermission(permission: PermissionKey, minimumScope?: PermissionScope): boolean {
+    const grant = this.session?.permissions?.find(item => item.key === permission);
+    if (!grant) {
+      return false;
+    }
+
+    if (!minimumScope) {
+      return true;
+    }
+
+    return this.scopeRank(grant.scope) >= this.scopeRank(minimumScope);
+  }
+
+  get permissionSummary(): string {
+    return `${this.session?.role ?? ''} - ${this.session?.scope ?? ''}`;
   }
 
   private loadWorkspace() {
@@ -444,6 +521,18 @@ export class App implements OnDestroy {
     };
 
     return Object.keys(this.validationErrors).length === 0;
+  }
+
+  private scopeRank(scope: PermissionScope): number {
+    const ranks: Record<PermissionScope, number> = {
+      own: 1,
+      team: 2,
+      department: 3,
+      branch: 4,
+      organization: 5
+    };
+
+    return ranks[scope] ?? 0;
   }
 
   private clearInactivityTimer() {
@@ -572,6 +661,7 @@ const translations = {
     requiredField: 'This field is required.',
     requiredLogin: 'Email and password are required.',
     sessionExpired: 'Session expired after 20 minutes of inactivity. Please sign in again.',
+    permissionDenied: 'You do not have permission for this action.',
     loadingWorkspace: 'Loading workspace...',
     saving: 'Saving...',
     loginFailed: 'Login failed. Use one of the demo accounts below.',
@@ -688,6 +778,7 @@ const translations = {
     requiredField: 'یہ فیلڈ ضروری ہے۔',
     requiredLogin: 'ای میل اور پاس ورڈ ضروری ہیں۔',
     sessionExpired: '20 منٹ غیر فعال رہنے کے بعد سیشن ختم ہو گیا۔ دوبارہ لاگ ان کریں۔',
+    permissionDenied: 'آپ کو اس عمل کی اجازت نہیں ہے۔',
     loadingWorkspace: 'ورک اسپیس لوڈ ہو رہی ہے...',
     saving: 'محفوظ ہو رہا ہے...',
     loginFailed: 'لاگ ان ناکام۔ نیچے موجود ڈیمو اکاؤنٹس استعمال کریں۔',
@@ -803,6 +894,7 @@ const translations = {
     requiredField: 'هذا الحقل مطلوب.',
     requiredLogin: 'البريد الإلكتروني وكلمة المرور مطلوبان.',
     sessionExpired: 'انتهت الجلسة بعد 20 دقيقة من عدم النشاط. يرجى تسجيل الدخول مرة أخرى.',
+    permissionDenied: 'ليس لديك صلاحية لهذا الإجراء.',
     loadingWorkspace: 'جاري تحميل مساحة العمل...',
     saving: 'جار الحفظ...',
     loginFailed: 'فشل تسجيل الدخول. استخدم أحد حسابات التجربة أدناه.',
@@ -918,6 +1010,7 @@ const translations = {
     requiredField: 'Ce champ est obligatoire.',
     requiredLogin: 'E-mail et mot de passe sont obligatoires.',
     sessionExpired: 'Session expirée après 20 minutes d’inactivité. Connectez-vous à nouveau.',
+    permissionDenied: 'Vous n’avez pas l’autorisation pour cette action.',
     loadingWorkspace: 'Chargement...',
     saving: 'Enregistrement...',
     loginFailed: 'Connexion échouée. Utilisez un compte démo ci-dessous.',

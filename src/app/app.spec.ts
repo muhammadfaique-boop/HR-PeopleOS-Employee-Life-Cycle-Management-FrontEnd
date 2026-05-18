@@ -111,6 +111,8 @@ describe('App', () => {
   });
 
   it('blocks leave submission when required fields are missing', () => {
+    component.session = demoSession();
+
     component.submitLeave();
 
     expect(component.fieldError('fromDate')).toBe('This field is required.');
@@ -134,6 +136,21 @@ function demoSession() {
     token: 'demo-token-3',
     email: 'employee@peopleos.dev',
     role: 'Employee',
+    scope: 'own',
+    permissions: [
+      { key: 'attendance.read', scope: 'own' },
+      { key: 'attendance.correct', scope: 'own' },
+      { key: 'leave.read', scope: 'own' },
+      { key: 'leave.create', scope: 'own' },
+      { key: 'employee.read', scope: 'own' },
+      { key: 'employee.update', scope: 'own' },
+      { key: 'benefit.read', scope: 'own' },
+      { key: 'expense.read', scope: 'own' },
+      { key: 'expense.create', scope: 'own' },
+      { key: 'resignation.read', scope: 'own' },
+      { key: 'resignation.create', scope: 'own' },
+      { key: 'policy.read', scope: 'own' }
+    ],
     employee: {
       id: 2,
       employeeCode: 'EMP-1042',

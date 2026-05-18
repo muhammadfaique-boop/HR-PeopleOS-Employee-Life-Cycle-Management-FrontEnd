@@ -1,56 +1,97 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import {
   AttendanceCorrection,
+  AttendanceData,
+  BenefitPlan,
+  Dashboard,
   ExpenseClaim,
+  LeaveData,
   LeaveRequest,
+  PolicyDocument,
   ResignationRequest,
   Session
 } from '../../../shared/models/peopleos.models';
 import { FileDownloadService } from '../../../core/services/file-download.service';
-import { ChangePasswordRequestDto, LoginRequestDto, ProfileUpdateRequestDto } from '../models/peopleos.dto';
-import { PeopleOsApiService, PeopleOsWorkspaceResponse } from '../services/peopleos-api.service';
+import { AttendanceApiService } from '../../attendance/services/attendance-api.service';
+import { AuthApiService } from '../../auth/services/auth-api.service';
+import { ChangePasswordRequestDto } from '../../auth/models/change-password-request.dto';
+import { LoginRequestDto } from '../../auth/models/login-request.dto';
+import { BenefitsApiService } from '../../benefits/services/benefits-api.service';
+import { DashboardApiService } from '../../dashboard/services/dashboard-api.service';
+import { ExpenseApiService } from '../../expense/services/expense-api.service';
+import { LeaveApiService } from '../../leave/services/leave-api.service';
+import { ProfileUpdateRequestDto } from '../../people/models/profile-update-request.dto';
+import { PeopleApiService } from '../../people/services/people-api.service';
+import { PoliciesApiService } from '../../policies/services/policies-api.service';
+import { ResignationApiService } from '../../resignation/services/resignation-api.service';
+
+export interface PeopleOsWorkspaceResponse {
+  dashboard: Dashboard;
+  attendance: AttendanceData;
+  leave: LeaveData;
+  benefits: BenefitPlan[];
+  policies: PolicyDocument[];
+  expenseClaims: ExpenseClaim[];
+  resignations: ResignationRequest[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class PeopleOsFacade {
-  private readonly api = inject(PeopleOsApiService);
+  private readonly attendanceApi = inject(AttendanceApiService);
+  private readonly authApi = inject(AuthApiService);
+  private readonly benefitsApi = inject(BenefitsApiService);
+  private readonly dashboardApi = inject(DashboardApiService);
   private readonly downloads = inject(FileDownloadService);
+  private readonly expenseApi = inject(ExpenseApiService);
+  private readonly leaveApi = inject(LeaveApiService);
+  private readonly peopleApi = inject(PeopleApiService);
+  private readonly policiesApi = inject(PoliciesApiService);
+  private readonly resignationApi = inject(ResignationApiService);
 
   login(request: LoginRequestDto): Observable<Session> {
-    return this.api.login(request);
+    return this.authApi.login(request);
   }
 
   loadWorkspace(): Observable<PeopleOsWorkspaceResponse> {
-    return this.api.loadWorkspace();
+    return forkJoin({
+      dashboard: this.dashboardApi.getDashboard(),
+      attendance: this.attendanceApi.getAttendance(),
+      leave: this.leaveApi.getLeave(),
+      benefits: this.benefitsApi.getBenefits(),
+      policies: this.policiesApi.getPolicies(),
+      expenseClaims: this.expenseApi.getClaims(),
+      resignations: this.resignationApi.getResignations()
+    });
   }
 
   changePassword(request: ChangePasswordRequestDto): Observable<unknown> {
-    return this.api.changePassword(request);
+    return this.authApi.changePassword(request);
   }
 
   submitLeave(request: unknown): Observable<LeaveRequest> {
-    return this.api.submitLeave(request);
+    return this.leaveApi.submitLeave(request);
   }
 
   submitCorrection(request: unknown): Observable<AttendanceCorrection> {
-    return this.api.submitCorrection(request);
+    return this.attendanceApi.submitCorrection(request);
   }
 
   submitExpense(request: unknown): Observable<ExpenseClaim> {
-    return this.api.submitExpense(request);
+    return this.expenseApi.submitClaim(request);
   }
 
   submitResignation(request: unknown): Observable<ResignationRequest> {
-    return this.api.submitResignation(request);
+    return this.resignationApi.submitResignation(request);
   }
 
   updateProfile(employeeId: number, request: ProfileUpdateRequestDto) {
-    return this.api.updateProfile(employeeId, request);
+    return this.peopleApi.updateProfile(employeeId, request);
   }
 
   downloadAttendance(format: 'excel' | 'pdf', employeeId: number): void {
     const extension = format === 'pdf' ? 'pdf' : 'csv';
     const fallbackName = `Login_UserId_${employeeId}.Attendance log.${extension}`;
-    this.api.downloadAttendance(format, employeeId).subscribe(response => this.downloads.saveResponse(response, fallbackName));
+    this.attendanceApi.download(format, employeeId).subscribe(response => this.downloads.saveResponse(response, fallbackName));
   }
 }
