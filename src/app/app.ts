@@ -145,32 +145,13 @@ export class App implements OnDestroy {
     this.clearMessageTimer();
   }
 
-  login() {
-    this.validationErrors = {};
-    const credentials = this.loginForm.getRawValue();
-    if (!credentials.email.trim() || !credentials.password.trim()) {
-      this.error = this.t('requiredLogin');
-      return;
-    }
-
+  handleSessionReady(session: Session) {
     this.loading = true;
     this.error = '';
-
-    this.peopleOs.login({
-      email: credentials.email,
-      password: credentials.password
-    }).subscribe({
-      next: session => {
-        this.session = session;
-        this.resetSessionDrafts(session);
-        this.resetInactivityTimer();
-        this.loadWorkspace();
-      },
-      error: () => {
-        this.loading = false;
-        this.error = this.t('loginFailed');
-      }
-    });
+    this.session = session;
+    this.resetSessionDrafts(session);
+    this.resetInactivityTimer();
+    this.loadWorkspace();
   }
 
   logout() {
@@ -186,7 +167,6 @@ export class App implements OnDestroy {
     this.activeView = 'overview';
     this.profileMenuOpen = false;
     this.passwordPanelOpen = false;
-    this.resetPasswordPanelOpen = false;
     this.notificationsOpen = false;
     this.readNotificationKeys.clear();
     this.validationErrors = {};
@@ -247,70 +227,6 @@ export class App implements OnDestroy {
 
   showPasswordPanel() {
     this.passwordPanelOpen = !this.passwordPanelOpen;
-  }
-
-  toggleResetPasswordPanel() {
-    this.resetPasswordPanelOpen = !this.resetPasswordPanelOpen;
-    if (this.resetPasswordPanelOpen) {
-      this.resetPasswordForm.patchValue({ email: this.loginForm.controls.email.value });
-    }
-  }
-
-  togglePasswordVisibility(field: 'login' | 'reset' | 'resetConfirm' | 'current' | 'new' | 'confirm') {
-    if (field === 'login') {
-      this.loginPasswordVisible = !this.loginPasswordVisible;
-    } else if (field === 'reset') {
-      this.resetPasswordVisible = !this.resetPasswordVisible;
-    } else if (field === 'resetConfirm') {
-      this.resetConfirmPasswordVisible = !this.resetConfirmPasswordVisible;
-    } else if (field === 'current') {
-      this.currentPasswordVisible = !this.currentPasswordVisible;
-    } else if (field === 'new') {
-      this.newPasswordVisible = !this.newPasswordVisible;
-    } else {
-      this.confirmPasswordVisible = !this.confirmPasswordVisible;
-    }
-  }
-
-  resetPassword() {
-    this.validationErrors = {};
-    const resetForm = this.resetPasswordForm.getRawValue();
-    if (!this.requireFields([
-      ['resetEmail', resetForm.email],
-      ['resetNewPassword', resetForm.newPassword],
-      ['resetConfirmPassword', resetForm.confirmPassword]
-    ])) {
-      return;
-    }
-
-    if (resetForm.newPassword !== resetForm.confirmPassword) {
-      this.error = this.t('passwordMismatch');
-      return;
-    }
-
-    this.formBusy = 'resetPassword';
-    this.peopleOs.resetPassword({
-      email: resetForm.email,
-      newPassword: resetForm.newPassword
-    }).pipe(finalize(() => this.formBusy = '')).subscribe({
-      next: () => {
-        this.loginForm.patchValue({
-          email: resetForm.email,
-          password: resetForm.newPassword
-        });
-        this.resetPasswordForm.reset({
-          email: resetForm.email,
-          newPassword: '',
-          confirmPassword: ''
-        });
-        this.resetPasswordPanelOpen = false;
-        this.error = '';
-        this.showMessage(this.t('passwordReset'));
-      },
-      error: () => {
-        this.error = this.t('passwordResetFailed');
-      }
-    });
   }
 
   uploadImage(event: Event) {
