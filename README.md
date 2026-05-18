@@ -44,3 +44,10 @@ Open `http://localhost:4300`.
 ```powershell
 ng build
 ```
+
+## QA
+
+```powershell
+npm test -- --watch=false --browsers=ChromeHeadless
+npm run build
+```
