@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnDestroy, inject } from '@angular/core';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { FileReaderService } from './core/services/file-reader.service';
 import { PeopleOsFacade } from './features/peopleos/store/peopleos-facade.service';
@@ -67,33 +67,33 @@ export class App implements OnDestroy {
   readonly leaveForm = this.fb.group({
     employeeId: [2],
     leaveType: ['Casual Leave', Validators.required],
-    fromDate: ['', Validators.required],
-    toDate: ['', Validators.required],
-    reason: ['', Validators.required],
-    contactDuringLeave: ['', Validators.required],
+    fromDate: new FormControl<string | null>('', Validators.required),
+    toDate: new FormControl<string | null>('', Validators.required),
+    reason: new FormControl<string | null>('', Validators.required),
+    contactDuringLeave: new FormControl<string | null>('', Validators.required),
     attachmentFileName: [''],
     attachmentDataUrl: ['']
   });
   readonly correctionForm = this.fb.group({
     employeeId: [2],
-    workDate: ['', Validators.required],
-    requestedChange: ['', Validators.required],
-    reason: ['', Validators.required]
+    workDate: new FormControl<string | null>('', Validators.required),
+    requestedChange: new FormControl<string | null>('', Validators.required),
+    reason: new FormControl<string | null>('', Validators.required)
   });
   readonly expenseForm = this.fb.group({
     employeeId: [2],
     claimType: ['Medical Expense OPD', Validators.required],
     category: ['Medical OPD', Validators.required],
     amount: [0, Validators.min(1)],
-    expenseDate: ['', Validators.required],
-    description: ['', Validators.required],
+    expenseDate: new FormControl<string | null>('', Validators.required),
+    description: new FormControl<string | null>('', Validators.required),
     receiptFileName: [''],
     receiptDataUrl: ['']
   });
   readonly resignationForm = this.fb.group({
     employeeId: [2],
-    lastWorkingDate: ['', Validators.required],
-    reason: ['', Validators.required]
+    lastWorkingDate: new FormControl<string | null>('', Validators.required),
+    reason: new FormControl<string | null>('', Validators.required)
   });
   readonly profileForm = this.fb.group({
     preferredLanguage: ['English' as SupportedLanguage, Validators.required],
@@ -573,22 +573,26 @@ export class App implements OnDestroy {
     this.leaveForm.reset({
       employeeId,
       leaveType: 'Casual Leave',
-      fromDate: '',
-      toDate: '',
-      reason: '',
-      contactDuringLeave: '',
+      fromDate: null,
+      toDate: null,
+      reason: null,
+      contactDuringLeave: null,
       attachmentFileName: '',
       attachmentDataUrl: ''
     });
+    this.leaveForm.markAsPristine();
+    this.leaveForm.markAsUntouched();
   }
 
   private resetCorrectionForm(employeeId = this.session?.employee.id ?? 2) {
     this.correctionForm.reset({
       employeeId,
-      workDate: '',
-      requestedChange: '',
-      reason: ''
+      workDate: null,
+      requestedChange: null,
+      reason: null
     });
+    this.correctionForm.markAsPristine();
+    this.correctionForm.markAsUntouched();
   }
 
   private resetExpenseForm(employeeId = this.session?.employee.id ?? 2) {
@@ -597,19 +601,23 @@ export class App implements OnDestroy {
       claimType: 'Medical Expense OPD',
       category: 'Medical OPD',
       amount: 0,
-      expenseDate: '',
-      description: '',
+      expenseDate: null,
+      description: null,
       receiptFileName: '',
       receiptDataUrl: ''
     });
+    this.expenseForm.markAsPristine();
+    this.expenseForm.markAsUntouched();
   }
 
   private resetResignationForm(employeeId = this.session?.employee.id ?? 2) {
     this.resignationForm.reset({
       employeeId,
-      lastWorkingDate: '',
-      reason: ''
+      lastWorkingDate: null,
+      reason: null
     });
+    this.resignationForm.markAsPristine();
+    this.resignationForm.markAsUntouched();
   }
 
   private toSupportedLanguage(value: string | null | undefined): SupportedLanguage {

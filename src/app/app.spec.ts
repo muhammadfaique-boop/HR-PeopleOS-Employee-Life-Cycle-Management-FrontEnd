@@ -119,6 +119,40 @@ describe('App', () => {
     expect(component.fieldError('leaveReason')).toBe('This field is required.');
   });
 
+  it('resets attendance correction form after successful submission', () => {
+    component.session = demoSession();
+    component.attendance = demoAttendance();
+    component.correctionForm.setValue({
+      employeeId: 2,
+      workDate: '2026-05-19',
+      requestedChange: 'sss',
+      reason: 'issue'
+    });
+
+    component.submitCorrection();
+
+    const request = http.expectOne('http://localhost:5265/api/peopleos/attendance/corrections');
+    expect(request.request.body.requestedChange).toBe('sss');
+    request.flush({
+      id: 99,
+      workDate: '2026-05-19',
+      requestedChange: 'sss',
+      reason: 'issue',
+      status: 'Pending line manager',
+      approver: 'Ayesha Khan'
+    });
+
+    expect(component.correctionForm.getRawValue()).toEqual({
+      employeeId: 2,
+      workDate: null,
+      requestedChange: null,
+      reason: null
+    });
+    expect(component.attendance?.corrections[0].requestedChange).toBe('sss');
+
+    flushWorkspaceRequests(http);
+  });
+
   it('auto logs out after 20 minutes of inactivity', fakeAsync(() => {
     component.session = demoSession();
     component.dashboard = demoDashboard();
@@ -252,4 +286,14 @@ function demoLeave() {
     ],
     requests: []
   };
+}
+
+function flushWorkspaceRequests(http: HttpTestingController) {
+  http.expectOne('http://localhost:5265/api/peopleos/dashboard').flush(demoDashboard());
+  http.expectOne('http://localhost:5265/api/peopleos/attendance').flush(demoAttendance());
+  http.expectOne('http://localhost:5265/api/peopleos/leave').flush(demoLeave());
+  http.expectOne('http://localhost:5265/api/peopleos/benefits').flush([]);
+  http.expectOne('http://localhost:5265/api/peopleos/policies').flush([]);
+  http.expectOne('http://localhost:5265/api/peopleos/expense').flush([]);
+  http.expectOne('http://localhost:5265/api/peopleos/resignations').flush([]);
 }
