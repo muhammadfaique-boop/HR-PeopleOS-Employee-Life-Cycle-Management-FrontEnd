@@ -11,7 +11,10 @@ Included:
 - Employee directory
 - Attendance and corrections
 - Leave balances and requests
-- Benefits
+- Benefits, mobility, and expense categories
+- Expense claims including Medical OPD
+- Resignation requests
+- Profile language and photo updates
 - Policies and downloads
 - Approval visibility
 

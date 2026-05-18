@@ -23,7 +23,39 @@ export class App {
   leave: LeaveData | null = null;
   benefits: BenefitPlan[] = [];
   policies: PolicyDocument[] = [];
+  expenseClaims: ExpenseClaim[] = [];
+  resignations: ResignationRequest[] = [];
   activeView: ViewKey = 'overview';
+  message = '';
+  selectedLanguage = 'English';
+  profileImageUrl = '';
+  leaveForm = {
+    employeeId: 2,
+    leaveType: 'Casual Leave',
+    fromDate: '',
+    toDate: '',
+    reason: '',
+    contactDuringLeave: ''
+  };
+  correctionForm = {
+    employeeId: 2,
+    workDate: '',
+    requestedChange: '',
+    reason: ''
+  };
+  expenseForm = {
+    employeeId: 2,
+    claimType: 'Medical Expense OPD',
+    category: 'Medical OPD',
+    amount: 0,
+    expenseDate: '',
+    description: ''
+  };
+  resignationForm = {
+    employeeId: 2,
+    lastWorkingDate: '',
+    reason: ''
+  };
 
   login() {
     this.loading = true;
@@ -35,6 +67,8 @@ export class App {
     }).subscribe({
       next: session => {
         this.session = session;
+        this.selectedLanguage = session.employee.preferredLanguage || 'English';
+        this.profileImageUrl = session.employee.profileImageUrl || '';
         this.loadWorkspace();
       },
       error: () => {
@@ -52,6 +86,56 @@ export class App {
 
   selectView(view: ViewKey) {
     this.activeView = view;
+  }
+
+  submitLeave() {
+    this.http.post<LeaveRequest>(`${this.apiUrl}/peopleos/leave/requests`, this.leaveForm).subscribe(item => {
+      this.leave?.requests.unshift(item);
+      this.message = 'Leave request submitted to line manager.';
+      this.loadWorkspace();
+    });
+  }
+
+  submitCorrection() {
+    this.http.post<AttendanceCorrection>(`${this.apiUrl}/peopleos/attendance/corrections`, this.correctionForm).subscribe(item => {
+      this.attendance?.corrections.unshift(item);
+      this.message = 'Attendance correction submitted to line manager.';
+      this.loadWorkspace();
+    });
+  }
+
+  submitExpense() {
+    this.http.post<ExpenseClaim>(`${this.apiUrl}/peopleos/expense/claims`, this.expenseForm).subscribe(item => {
+      this.expenseClaims.unshift(item);
+      this.message = 'Expense claim submitted to line manager.';
+      this.loadWorkspace();
+    });
+  }
+
+  submitResignation() {
+    this.http.post<ResignationRequest>(`${this.apiUrl}/peopleos/resignations`, this.resignationForm).subscribe(item => {
+      this.resignations.unshift(item);
+      this.message = 'Resignation request submitted to line manager.';
+      this.loadWorkspace();
+    });
+  }
+
+  updateProfile() {
+    if (!this.session) {
+      return;
+    }
+
+    this.http.patch<Employee>(`${this.apiUrl}/peopleos/employees/${this.session.employee.id}/profile`, {
+      preferredLanguage: this.selectedLanguage,
+      profileImageUrl: this.profileImageUrl
+    }).subscribe(employee => {
+      this.session = { ...this.session!, employee };
+      this.message = 'Profile settings updated.';
+    });
+  }
+
+  downloadAttendance(format: 'excel' | 'pdf') {
+    window.open(`${this.apiUrl}/peopleos/attendance/download/${format}?employeeId=2`, '_blank');
   }
 
   private loadWorkspace() {
@@ -75,10 +159,18 @@ export class App {
     this.http.get<PolicyDocument[]>(`${this.apiUrl}/peopleos/policies`).subscribe(data => {
       this.policies = data;
     });
+
+    this.http.get<ExpenseClaim[]>(`${this.apiUrl}/peopleos/expense`).subscribe(data => {
+      this.expenseClaims = data;
+    });
+
+    this.http.get<ResignationRequest[]>(`${this.apiUrl}/peopleos/resignations`).subscribe(data => {
+      this.resignations = data;
+    });
   }
 }
 
-type ViewKey = 'overview' | 'people' | 'attendance' | 'leave' | 'benefits' | 'policies';
+type ViewKey = 'overview' | 'people' | 'attendance' | 'leave' | 'benefits' | 'expense' | 'resignation' | 'profile' | 'policies';
 
 interface Session {
   token: string;
@@ -114,6 +206,8 @@ interface Employee {
   joiningDate: string;
   profileCompletion: number;
   workLocation: string;
+  preferredLanguage: string;
+  profileImageUrl: string;
 }
 
 interface LifecycleStage {
@@ -188,6 +282,7 @@ interface BenefitPlan {
   category: string;
   coverage: string;
   status: string;
+  description: string;
 }
 
 interface PolicyDocument {
@@ -196,4 +291,24 @@ interface PolicyDocument {
   category: string;
   version: string;
   publishedOn: string;
+}
+
+interface ExpenseClaim {
+  id: number;
+  claimType: string;
+  category: string;
+  amount: number;
+  expenseDate: string;
+  description: string;
+  status: string;
+  lineManager: string;
+}
+
+interface ResignationRequest {
+  id: number;
+  resignationDate: string;
+  lastWorkingDate: string;
+  reason: string;
+  status: string;
+  lineManager: string;
 }

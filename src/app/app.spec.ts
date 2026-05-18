@@ -50,6 +50,8 @@ describe('App', () => {
     http.expectOne('http://localhost:5265/api/peopleos/policies').flush([
       { id: 1, title: 'Leave Policy', category: 'Leave', version: 'v1', publishedOn: '2026-03-15' }
     ]);
+    http.expectOne('http://localhost:5265/api/peopleos/expense').flush([]);
+    http.expectOne('http://localhost:5265/api/peopleos/resignations').flush([]);
 
     fixture.detectChanges();
 
@@ -100,7 +102,9 @@ function demoSession() {
       lifecycleStatus: 'Active',
       joiningDate: '2026-01-16',
       profileCompletion: 88,
-      workLocation: 'Lahore'
+      workLocation: 'Lahore',
+      preferredLanguage: 'English',
+      profileImageUrl: ''
     }
   };
 }

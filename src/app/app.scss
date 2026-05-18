@@ -76,6 +76,21 @@ input {
   color: #17211d;
 }
 
+select,
+textarea {
+  border: 1px solid #c8d4ce;
+  border-radius: 6px;
+  padding: 12px 14px;
+  font: inherit;
+  color: #17211d;
+  background: #fff;
+}
+
+textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
 button {
   border: 0;
   border-radius: 6px;
@@ -231,6 +246,22 @@ h2 {
   padding: 9px 12px;
 }
 
+.profile-photo {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.toast {
+  background: #e8f3ef;
+  border: 1px solid #b7d8cd;
+  color: #00645f;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-weight: 800;
+}
+
 .view {
   display: grid;
   gap: 18px;
@@ -270,6 +301,10 @@ h2 {
   gap: 18px;
 }
 
+.full-span {
+  grid-column: 1 / -1;
+}
+
 .panel {
   padding: 18px;
 }
@@ -284,6 +319,31 @@ h2 {
 
 .panel-head h3 {
   margin: 0;
+}
+
+.link-button {
+  background: #17211d;
+  color: #fff;
+  padding: 7px 10px;
+  margin-left: 8px;
+}
+
+.compact-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.compact-form button {
+  background: #e1b84f;
+  color: #17211d;
+  padding: 12px 14px;
+}
+
+.form-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .timeline-item {
@@ -428,6 +488,22 @@ th {
   color: #d86f45;
   font-size: 12px;
   font-weight: 900;
+}
+
+.profile-preview {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  min-height: 240px;
+  text-align: center;
+}
+
+.profile-preview img {
+  width: 124px;
+  height: 124px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid #e1b84f;
 }
 
 @media (max-width: 960px) {
