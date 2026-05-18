@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { forkJoin, Observable } from 'rxjs';
 import {
+  ApprovalDecision,
+  ApprovalTask,
   AttendanceCorrection,
   AttendanceData,
   BenefitPlan,
@@ -83,6 +85,10 @@ export class PeopleOsFacade {
 
   submitResignation(request: unknown): Observable<ResignationRequest> {
     return this.resignationApi.submitResignation(request);
+  }
+
+  decideApproval(approvalId: number, decision: ApprovalDecision): Observable<ApprovalTask> {
+    return this.dashboardApi.decideApproval(approvalId, decision);
   }
 
   updateProfile(employeeId: number, request: ProfileUpdateRequestDto) {

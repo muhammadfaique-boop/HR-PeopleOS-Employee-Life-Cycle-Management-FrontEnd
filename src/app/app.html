@@ -59,7 +59,14 @@
             </button>
             <div class="notification-menu" *ngIf="notificationsOpen">
               <div class="notification-head"><strong>{{ t('notifications') }}</strong><button type="button" (click)="markNotificationsRead()">{{ t('markRead') }}</button></div>
-              <article *ngFor="let note of notifications" [class]="note.tone"><span>{{ note.title }}</span><p>{{ note.body }}</p></article>
+              <article *ngFor="let note of notifications" [class]="note.tone">
+                <span>{{ note.title }}</span>
+                <p>{{ note.body }}</p>
+                <div class="approval-actions compact" *ngIf="canDecideNotificationApproval(note)">
+                  <button type="button" class="approve" [disabled]="isNotificationApprovalBusy(note)" (click)="decideNotificationApproval(note, 'Approved')">{{ t('approve') }}</button>
+                  <button type="button" class="reject" [disabled]="isNotificationApprovalBusy(note)" (click)="decideNotificationApproval(note, 'Rejected')">{{ t('reject') }}</button>
+                </div>
+              </article>
               <p class="empty-state" *ngIf="!notifications.length">{{ t('noNotifications') }}</p>
             </div>
           </div>
@@ -147,7 +154,7 @@
           </section>
         <section class="panel">
           <div class="panel-head"><h3>{{ t('lineManagerApprovalQueue') }}</h3><span>{{ dashboard.approvals.length }} {{ t('open') }}</span></div>
-            <article *ngFor="let item of dashboard.approvals" class="approval"><span>{{ translateText(item.type) }}</span><strong>{{ translateText(item.subject) }}</strong><small>{{ translateText(item.approverRole) }} - {{ translateText(item.status) }} - {{ item.dueDate | date }}</small></article>
+            <article *ngFor="let item of dashboard.approvals" class="approval"><span>{{ translateText(item.type) }}</span><strong>{{ translateText(item.subject) }}</strong><small>{{ translateText(item.approverRole) }} - {{ translateText(item.status) }} - {{ item.dueDate | date }}</small><div class="approval-actions" *ngIf="canDecideApproval(item)"><button type="button" class="approve" [disabled]="isApprovalBusy(item)" (click)="decideApproval(item, 'Approved')">{{ t('approve') }}</button><button type="button" class="reject" [disabled]="isApprovalBusy(item)" (click)="decideApproval(item, 'Rejected')">{{ t('reject') }}</button></div></article>
           </section>
         </div>
       </section>
@@ -188,7 +195,7 @@
       <section *ngIf="activeView === 'leave'" class="view two-column">
         <section class="panel">
           <div class="panel-head"><h3>{{ t('applyLeave') }}</h3><span>{{ t('calendarDates') }}</span></div>
-          <form class="compact-form" [formGroup]="leaveForm" (ngSubmit)="submitLeave()">
+          <form *ngIf="leaveFormVisible" class="compact-form" [formGroup]="leaveForm" (ngSubmit)="submitLeave()">
             <p-select formControlName="leaveType" [options]="leaveTypeOptions" optionLabel="label" optionValue="value"></p-select>
             <div class="form-pair">
               <app-form-field [label]="t('fromDate')" [error]="fieldError('fromDate')"><p-datepicker formControlName="fromDate" required dateFormat="yy-mm-dd" dataType="string" appendTo="body"></p-datepicker></app-form-field>
@@ -196,7 +203,7 @@
             </div>
             <app-form-field [error]="fieldError('leaveReason')"><textarea pTextarea formControlName="reason" required [placeholder]="t('reason')"></textarea></app-form-field>
             <app-form-field [error]="fieldError('leaveContact')"><input pInputText formControlName="contactDuringLeave" required [placeholder]="t('contactDuringLeave')" /></app-form-field>
-            <label class="file-picker">{{ t('attachLeaveDocument') }}<input type="file" accept=".pdf,image/*" (change)="attachLeaveFile($event)" /></label>
+            <label class="file-picker">{{ t('attachLeaveDocument') }}<input #leaveFileInput type="file" accept=".pdf,image/*" (change)="attachLeaveFile($event)" /></label>
             <small class="selected-file" *ngIf="leaveForm.controls.attachmentFileName.value">{{ t('selectedFile') }}: {{ leaveForm.controls.attachmentFileName.value }}</small>
             <button pButton type="submit" [disabled]="isBusy('leave')"><span *ngIf="isBusy('leave')" class="button-spinner"></span>{{ isBusy('leave') ? t('saving') : t('submitLeave') }}</button>
           </form>

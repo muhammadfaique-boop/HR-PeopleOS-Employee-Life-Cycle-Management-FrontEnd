@@ -7,3 +7,5 @@ export interface ApprovalTask {
   status: string;
   dueDate: string;
 }
+
+export type ApprovalDecision = 'Approved' | 'Rejected';

@@ -5,4 +5,5 @@ export interface NotificationItem {
   title: string;
   body: string;
   tone: NotificationTone;
+  approvalId?: number;
 }

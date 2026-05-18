@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, ViewChild, inject } from '@angular/core';
 import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { FileReaderService } from './core/services/file-reader.service';
@@ -7,6 +7,8 @@ import { PeopleOsFacade } from './features/peopleos/store/peopleos-facade.servic
 import { PRIMENG_UI_IMPORTS } from './shared/components/ui/primeng-ui.imports';
 import { collectRequiredFieldErrors } from './shared/validators/required-fields.validator';
 import {
+  ApprovalDecision,
+  ApprovalTask,
   AttendanceData,
   BenefitPlan,
   Dashboard,
@@ -30,9 +32,12 @@ import {
   styleUrl: './app.scss'
 })
 export class App implements OnDestroy {
+  @ViewChild('leaveFileInput') private leaveFileInput?: ElementRef<HTMLInputElement>;
+
   private readonly peopleOs = inject(PeopleOsFacade);
   private readonly fileReader = inject(FileReaderService);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly inactivityLimitMs = 20 * 60 * 1000;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -40,6 +45,7 @@ export class App implements OnDestroy {
   loading = false;
   workspaceLoading = false;
   formBusy = '';
+  approvalBusyId: number | null = null;
   validationErrors: Record<string, string> = {};
   session: Session | null = null;
   dashboard: Dashboard | null = null;
@@ -55,6 +61,7 @@ export class App implements OnDestroy {
   readNotificationKeys = new Set<string>();
   profileMenuOpen = false;
   passwordPanelOpen = false;
+  leaveFormVisible = true;
   readonly loginForm = this.fb.group({
     email: ['employee@peopleos.dev', Validators.required],
     password: ['Employee@123', Validators.required]
@@ -323,7 +330,8 @@ export class App implements OnDestroy {
       key: `approval-${item.id}-${item.status}`,
       title: this.t('approvalRequired'),
       body: `${this.translateText(item.subject)} - ${this.translateText(item.status)}`,
-      tone: 'urgent' as NotificationTone
+      tone: 'urgent' as NotificationTone,
+      approvalId: item.id
     }));
 
     const activity = this.dashboard.recentActivity.map((item, index) => ({
@@ -338,6 +346,53 @@ export class App implements OnDestroy {
 
   get unreadNotifications() {
     return this.notifications.filter(note => note.tone === 'urgent' && !this.readNotificationKeys.has(note.key)).length;
+  }
+
+  decideApproval(item: ApprovalTask, decision: ApprovalDecision) {
+    if (!this.canDecideApproval(item) || this.approvalBusyId) {
+      return;
+    }
+
+    this.approvalBusyId = item.id;
+    this.peopleOs.decideApproval(item.id, decision).pipe(finalize(() => {
+      this.approvalBusyId = null;
+    })).subscribe({
+      next: updated => {
+        this.applyApprovalDecision(updated || { ...item, status: decision });
+        this.message = decision === 'Approved' ? this.t('approvalApproved') : this.t('approvalRejected');
+        this.loadWorkspace();
+      },
+      error: () => {
+        this.message = this.t('approvalFailed');
+      }
+    });
+  }
+
+  decideNotificationApproval(note: NotificationItem, decision: ApprovalDecision) {
+    const item = this.dashboard?.approvals.find(approval => approval.id === note.approvalId);
+    if (!item) {
+      return;
+    }
+
+    this.decideApproval(item, decision);
+  }
+
+  canDecideApproval(item: ApprovalTask): boolean {
+    const permission = this.approvalPermissionFor(item.type);
+    return Boolean(permission) && this.hasPermission(permission!);
+  }
+
+  canDecideNotificationApproval(note: NotificationItem): boolean {
+    const item = this.dashboard?.approvals.find(approval => approval.id === note.approvalId);
+    return Boolean(item) && this.canDecideApproval(item!);
+  }
+
+  isApprovalBusy(item: ApprovalTask): boolean {
+    return this.approvalBusyId === item.id;
+  }
+
+  isNotificationApprovalBusy(note: NotificationItem): boolean {
+    return Boolean(note.approvalId) && this.approvalBusyId === note.approvalId;
   }
 
   submitLeave() {
@@ -361,7 +416,7 @@ export class App implements OnDestroy {
     this.peopleOs.submitLeave(leaveForm).pipe(finalize(() => this.formBusy = '')).subscribe(item => {
       this.leave?.requests.unshift(item);
       this.message = this.t('leaveSubmitted');
-      this.resetLeaveForm();
+      this.resetLeaveForm(this.session?.employee.id ?? 2, true);
       this.loadWorkspace();
     });
   }
@@ -569,7 +624,7 @@ export class App implements OnDestroy {
     });
   }
 
-  private resetLeaveForm(employeeId = this.session?.employee.id ?? 2) {
+  private resetLeaveForm(employeeId = this.session?.employee.id ?? 2, refreshControls = false) {
     this.leaveForm.reset({
       employeeId,
       leaveType: 'Casual Leave',
@@ -582,6 +637,17 @@ export class App implements OnDestroy {
     });
     this.leaveForm.markAsPristine();
     this.leaveForm.markAsUntouched();
+    this.leaveFileInput?.nativeElement && (this.leaveFileInput.nativeElement.value = '');
+
+    if (refreshControls) {
+      this.recreateLeaveFormControls();
+    }
+  }
+
+  private recreateLeaveFormControls() {
+    this.leaveFormVisible = false;
+    this.cdr.detectChanges();
+    this.leaveFormVisible = true;
   }
 
   private resetCorrectionForm(employeeId = this.session?.employee.id ?? 2) {
@@ -618,6 +684,40 @@ export class App implements OnDestroy {
     });
     this.resignationForm.markAsPristine();
     this.resignationForm.markAsUntouched();
+  }
+
+  private applyApprovalDecision(updated: ApprovalTask) {
+    if (!this.dashboard) {
+      return;
+    }
+
+    this.dashboard = {
+      ...this.dashboard,
+      approvals: this.dashboard.approvals.filter(item => item.id !== updated.id)
+    };
+    this.readNotificationKeys.add(`approval-${updated.id}-Pending`);
+  }
+
+  private approvalPermissionFor(type: string): PermissionKey | null {
+    const normalizedType = type.toLowerCase();
+
+    if (normalizedType.includes('leave')) {
+      return 'leave.approve';
+    }
+
+    if (normalizedType.includes('attendance')) {
+      return 'attendance.approve';
+    }
+
+    if (normalizedType.includes('expense')) {
+      return 'expense.approve';
+    }
+
+    if (normalizedType.includes('resignation')) {
+      return 'resignation.approve';
+    }
+
+    return null;
   }
 
   private toSupportedLanguage(value: string | null | undefined): SupportedLanguage {
@@ -680,6 +780,11 @@ const translations = {
     noNotifications: 'No notifications',
     markRead: 'Mark read',
     approvalRequired: 'Approval required',
+    approve: 'Approve',
+    reject: 'Reject',
+    approvalApproved: 'Approval approved.',
+    approvalRejected: 'Approval rejected.',
+    approvalFailed: 'Could not update approval. Please try again.',
     recentActivity: 'Recent activity',
     hrHub: 'HR Hub',
     quickActions: 'Quick Actions',

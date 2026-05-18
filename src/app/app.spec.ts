@@ -1,7 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { App } from './app';
+import { Session } from './shared/models/peopleos.models';
 
 describe('App', () => {
   let fixture: ComponentFixture<App>;
@@ -13,7 +15,9 @@ describe('App', () => {
       imports: [App],
       providers: [
         provideHttpClient(),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        ConfirmationService,
+        MessageService
       ]
     }).compileComponents();
 
@@ -86,7 +90,7 @@ describe('App', () => {
   });
 
   it('translates portal labels from the selected profile language', () => {
-    component.selectedLanguage = 'Urdu';
+    component.profileForm.controls.preferredLanguage.setValue('Urdu');
 
     expect(component.t('dashboard')).toBe('ڈیش بورڈ');
     expect(component.translateText('Pending')).toBe('زیر التوا');
@@ -117,6 +121,53 @@ describe('App', () => {
 
     expect(component.fieldError('fromDate')).toBe('This field is required.');
     expect(component.fieldError('leaveReason')).toBe('This field is required.');
+  });
+
+  it('resets leave form after successful submission', () => {
+    component.session = demoSession();
+    component.leave = demoLeave();
+    component.leaveForm.setValue({
+      employeeId: 2,
+      leaveType: 'Unpaid',
+      fromDate: '2026-05-18',
+      toDate: '2026-05-19',
+      reason: 'Merzi',
+      contactDuringLeave: '03321405967',
+      attachmentFileName: 'Login_UserId_2.Attendance log.pdf',
+      attachmentDataUrl: 'data:application/pdf;base64,abc'
+    });
+
+    component.submitLeave();
+
+    const request = http.expectOne('http://localhost:5265/api/peopleos/leave/requests');
+    expect(request.request.body.leaveType).toBe('Unpaid');
+    request.flush({
+      id: 98,
+      employeeId: 2,
+      leaveType: 'Unpaid',
+      fromDate: '2026-05-18',
+      toDate: '2026-05-19',
+      totalDays: 2,
+      reason: 'Merzi',
+      contactDuringLeave: '03321405967',
+      attachmentFileName: 'Login_UserId_2.Attendance log.pdf',
+      attachmentDataUrl: 'data:application/pdf;base64,abc',
+      status: 'Pending line manager'
+    });
+
+    expect(component.leaveForm.getRawValue()).toEqual({
+      employeeId: 2,
+      leaveType: 'Casual Leave',
+      fromDate: null,
+      toDate: null,
+      reason: null,
+      contactDuringLeave: null,
+      attachmentFileName: '',
+      attachmentDataUrl: ''
+    });
+    expect(component.leaveFormVisible).toBeTrue();
+
+    flushWorkspaceRequests(http);
   });
 
   it('resets attendance correction form after successful submission', () => {
@@ -165,7 +216,7 @@ describe('App', () => {
   }));
 });
 
-function demoSession() {
+function demoSession(): Session {
   return {
     token: 'demo-token-3',
     email: 'employee@peopleos.dev',
