@@ -84,6 +84,21 @@ describe('App', () => {
     expect(component.dashboard).toBeNull();
     expect(component.activeView).toBe('overview');
   });
+
+  it('translates portal labels from the selected profile language', () => {
+    component.selectedLanguage = 'Urdu';
+
+    expect(component.t('dashboard')).toBe('ڈیش بورڈ');
+    expect(component.translateText('Pending')).toBe('زیر التوا');
+  });
+
+  it('builds bell notifications from approvals and recent activity', () => {
+    component.dashboard = demoDashboard();
+
+    expect(component.unreadNotifications).toBe(1);
+    expect(component.notifications.length).toBe(2);
+    expect(component.notifications[0].title).toBe('Approval required');
+  });
 });
 
 function demoSession() {
@@ -133,7 +148,7 @@ function demoDashboard() {
         type: 'Leave',
         subject: 'Casual Leave - Muhammad Faique',
         requester: 'Muhammad Faique',
-        approverRole: 'Manager',
+        approverRole: 'Line Manager',
         status: 'Pending',
         dueDate: '2026-05-19'
       }

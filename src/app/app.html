@@ -1,19 +1,19 @@
-<main class="shell" [class.is-locked]="!session">
+<main class="shell" [class.is-locked]="!session" [class.rtl]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic'" [attr.dir]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic' ? 'rtl' : 'ltr'">
   <section *ngIf="!session" class="login-screen">
     <div class="login-panel">
       <div>
-        <p class="eyebrow">PeopleOS</p>
-        <h1>Hire-to-retire operations, without the maze.</h1>
-        <p class="login-copy">Lifecycle-first HR for onboarding, profile data, attendance, leave, benefits, expenses, resignation, policies, and approvals.</p>
+        <p class="eyebrow">{{ t('appTitle') }}</p>
+        <h1>{{ t('heroTitle') }}</h1>
+        <p class="login-copy">{{ t('heroCopy') }}</p>
       </div>
       <form class="login-form" (ngSubmit)="login()">
-        <label>Email <input name="email" [(ngModel)]="email" /></label>
-        <label>Password <input name="password" type="password" [(ngModel)]="password" /></label>
-        <button type="submit" [disabled]="loading">{{ loading ? 'Signing in...' : 'Sign in' }}</button>
+        <label>{{ t('email') }} <input name="email" [(ngModel)]="email" /></label>
+        <label>{{ t('password') }} <input name="password" type="password" [(ngModel)]="password" /></label>
+        <button type="submit" [disabled]="loading">{{ loading ? t('signingIn') : t('signIn') }}</button>
         <p class="error" *ngIf="error">{{ error }}</p>
       </form>
       <div class="demo-strip">
-        <span>Demo users</span>
+        <span>{{ t('demoUsers') }}</span>
         <code>admin@peopleos.dev / Admin&#64;123</code>
         <code>hr@peopleos.dev / Hr&#64;123</code>
         <code>employee@peopleos.dev / Employee&#64;123</code>
@@ -25,59 +25,70 @@
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-mark">P</span>
-        <div><strong>PeopleOS</strong><small>Lifecycle HR</small></div>
+        <div><strong>{{ t('appTitle') }}</strong><small>{{ t('appSubtitle') }}</small></div>
       </div>
       <nav>
-        <button [class.active]="activeView === 'overview'" (click)="selectView('overview')">Dashboard</button>
-        <button [class.active]="activeView === 'people'" (click)="selectView('people')">Employee Data</button>
-        <button [class.active]="activeView === 'attendance'" (click)="selectView('attendance')">Attendance</button>
-        <button [class.active]="activeView === 'leave'" (click)="selectView('leave')">Leaves</button>
-        <button [class.active]="activeView === 'benefits'" (click)="selectView('benefits')">Benefits</button>
-        <button [class.active]="activeView === 'expense'" (click)="selectView('expense')">Expense</button>
-        <button [class.active]="activeView === 'resignation'" (click)="selectView('resignation')">Resignation</button>
-        <button [class.active]="activeView === 'profile'" (click)="selectView('profile')">Profile</button>
-        <button [class.active]="activeView === 'policies'" (click)="selectView('policies')">Policies</button>
+        <button [class.active]="activeView === 'overview'" (click)="selectView('overview')">{{ t('dashboard') }}</button>
+        <button [class.active]="activeView === 'people'" (click)="selectView('people')">{{ t('employeeData') }}</button>
+        <button [class.active]="activeView === 'attendance'" (click)="selectView('attendance')">{{ t('attendance') }}</button>
+        <button [class.active]="activeView === 'leave'" (click)="selectView('leave')">{{ t('leaves') }}</button>
+        <button [class.active]="activeView === 'benefits'" (click)="selectView('benefits')">{{ t('benefits') }}</button>
+        <button [class.active]="activeView === 'expense'" (click)="selectView('expense')">{{ t('expense') }}</button>
+        <button [class.active]="activeView === 'resignation'" (click)="selectView('resignation')">{{ t('resignation') }}</button>
+        <button [class.active]="activeView === 'profile'" (click)="selectView('profile')">{{ t('profile') }}</button>
+        <button [class.active]="activeView === 'policies'" (click)="selectView('policies')">{{ t('policies') }}</button>
       </nav>
-      <div class="scope-note"><span>Excluded</span><p>Payroll, tax, travel management, and help desk tickets.</p></div>
+      <div class="scope-note"><span>{{ t('excluded') }}</span><p>{{ t('excludedCopy') }}</p></div>
     </aside>
 
     <section class="workspace">
       <header class="topbar">
-        <div><p class="eyebrow">Welcome back</p><h2>{{ session.employee.fullName }}</h2></div>
+        <div><p class="eyebrow">{{ t('welcomeBack') }}</p><h2>{{ session.employee.fullName }}</h2></div>
         <div class="user-chip">
           <span>{{ session.role }}</span>
+          <div class="notification-wrap">
+            <button type="button" class="bell-button" [attr.aria-label]="t('notifications')" (click)="toggleNotifications()">
+              <span class="bell-icon">!</span>
+              <i *ngIf="unreadNotifications">{{ unreadNotifications }}</i>
+            </button>
+            <div class="notification-menu" *ngIf="notificationsOpen">
+              <div class="notification-head"><strong>{{ t('notifications') }}</strong><button type="button" (click)="markNotificationsRead()">{{ t('markRead') }}</button></div>
+              <article *ngFor="let note of notifications" [class]="note.tone"><span>{{ note.title }}</span><p>{{ note.body }}</p></article>
+              <p class="empty-state" *ngIf="!notifications.length">{{ t('noNotifications') }}</p>
+            </div>
+          </div>
           <img *ngIf="session.employee.profileImageUrl" class="profile-photo" [src]="session.employee.profileImageUrl" alt="Profile" />
-          <button type="button" (click)="logout()">Sign out</button>
+          <button type="button" (click)="logout()">{{ t('signOut') }}</button>
         </div>
       </header>
       <p class="toast" *ngIf="message">{{ message }}</p>
 
       <section *ngIf="activeView === 'overview'" class="view">
         <div class="metric-grid">
-          <article *ngFor="let metric of dashboard.metrics" class="metric" [class]="metric.accent"><span>{{ metric.label }}</span><strong>{{ metric.value }}</strong></article>
+          <article *ngFor="let metric of dashboard.metrics" class="metric" [class]="metric.accent"><span>{{ translateText(metric.label) }}</span><strong>{{ metric.value }}</strong></article>
         </div>
         <div class="two-column">
           <section class="panel">
-            <div class="panel-head"><h3>Lifecycle Tracker</h3><span>Hire to retire</span></div>
+            <div class="panel-head"><h3>{{ t('lifecycleTracker') }}</h3><span>{{ t('hireToRetire') }}</span></div>
             <article *ngFor="let item of dashboard.lifecycle" class="timeline-item">
               <div class="timeline-dot"></div>
-              <div><div class="row-title"><strong>{{ item.stage }}</strong><span>{{ item.status }}</span></div><p>{{ item.summary }}</p><small>{{ item.owner }} owner - Due {{ item.dueDate | date }}</small></div>
+              <div><div class="row-title"><strong>{{ translateText(item.stage) }}</strong><span>{{ translateText(item.status) }}</span></div><p>{{ translateText(item.summary) }}</p><small>{{ translateText(item.owner) }} {{ t('owner') }} - {{ t('due') }} {{ item.dueDate | date }}</small></div>
             </article>
           </section>
         <section class="panel">
-          <div class="panel-head"><h3>Line Manager Approval Queue</h3><span>{{ dashboard.approvals.length }} open</span></div>
-            <article *ngFor="let item of dashboard.approvals" class="approval"><span>{{ item.type }}</span><strong>{{ item.subject }}</strong><small>{{ item.approverRole }} - {{ item.status }} - {{ item.dueDate | date }}</small></article>
+          <div class="panel-head"><h3>{{ t('lineManagerApprovalQueue') }}</h3><span>{{ dashboard.approvals.length }} {{ t('open') }}</span></div>
+            <article *ngFor="let item of dashboard.approvals" class="approval"><span>{{ translateText(item.type) }}</span><strong>{{ translateText(item.subject) }}</strong><small>{{ translateText(item.approverRole) }} - {{ translateText(item.status) }} - {{ item.dueDate | date }}</small></article>
           </section>
         </div>
       </section>
 
       <section *ngIf="activeView === 'people'" class="view">
         <section class="panel">
-          <div class="panel-head"><h3>Employee Directory</h3><span>{{ dashboard.employees.length }} profiles</span></div>
+          <div class="panel-head"><h3>{{ t('employeeDirectory') }}</h3><span>{{ dashboard.employees.length }} {{ t('profiles') }}</span></div>
           <div class="people-grid">
             <article *ngFor="let person of dashboard.employees" class="person-card">
               <div class="avatar">{{ person.fullName[0] }}</div>
-              <div><strong>{{ person.fullName }}</strong><span>{{ person.position }}</span><small>{{ person.department }} - {{ person.workLocation }} - Manager: {{ person.manager }}</small></div>
+              <div><strong>{{ person.fullName }}</strong><span>{{ person.position }}</span><small>{{ person.department }} - {{ person.workLocation }} - {{ t('manager') }}: {{ person.manager }}</small></div>
               <div class="completion"><span>{{ person.profileCompletion }}%</span><div><i [style.width.%]="person.profileCompletion"></i></div></div>
             </article>
           </div>
@@ -86,63 +97,63 @@
 
       <section *ngIf="activeView === 'attendance'" class="view two-column">
         <section class="panel">
-          <div class="panel-head"><h3>Monthly Attendance Log</h3><span><button class="link-button" (click)="downloadAttendance('excel')">Download Excel</button><button class="link-button" (click)="downloadAttendance('pdf')">Download PDF</button></span></div>
-          <table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of attendance?.records"><td>{{ item.workDate | date }}</td><td>{{ item.checkIn || '-' }}</td><td>{{ item.checkOut || '-' }}</td><td><span class="status">{{ item.status }}</span></td></tr></tbody></table>
+          <div class="panel-head"><h3>{{ t('monthlyAttendanceLog') }}</h3><span><button class="link-button" (click)="downloadAttendance('excel')">{{ t('downloadExcel') }}</button><button class="link-button" (click)="downloadAttendance('pdf')">{{ t('downloadPdf') }}</button></span></div>
+          <table><thead><tr><th>{{ t('date') }}</th><th>{{ t('in') }}</th><th>{{ t('out') }}</th><th>{{ t('status') }}</th></tr></thead><tbody><tr *ngFor="let item of attendance?.records"><td>{{ item.workDate | date }}</td><td>{{ item.checkIn || '-' }}</td><td>{{ item.checkOut || '-' }}</td><td><span class="status">{{ translateText(item.status) }}</span></td></tr></tbody></table>
         </section>
         <section class="panel">
-          <div class="panel-head"><h3>Attendance Correction On Specific Date</h3><span>Line manager review</span></div>
+          <div class="panel-head"><h3>{{ t('attendanceCorrectionSpecific') }}</h3><span>{{ t('lineManagerReview') }}</span></div>
           <form class="compact-form" (ngSubmit)="submitCorrection()">
-            <label>Correction date <input name="correctionDate" type="date" [(ngModel)]="correctionForm.workDate" /></label>
-            <input name="requestedChange" placeholder="Requested change" [(ngModel)]="correctionForm.requestedChange" />
-            <textarea name="correctionReason" placeholder="Reason" [(ngModel)]="correctionForm.reason"></textarea>
-            <button type="submit">Submit Correction</button>
+            <label>{{ t('correctionDate') }} <input name="correctionDate" type="date" [(ngModel)]="correctionForm.workDate" /></label>
+            <input name="requestedChange" [placeholder]="t('requestedChange')" [(ngModel)]="correctionForm.requestedChange" />
+            <textarea name="correctionReason" [placeholder]="t('reason')" [(ngModel)]="correctionForm.reason"></textarea>
+            <button type="submit">{{ t('submitCorrection') }}</button>
           </form>
-          <article *ngFor="let item of attendance?.corrections" class="approval"><span>{{ item.workDate | date }}</span><strong>{{ item.requestedChange }}</strong><small>{{ item.status }} - {{ item.approver }}</small></article>
+          <article *ngFor="let item of attendance?.corrections" class="approval"><span>{{ item.workDate | date }}</span><strong>{{ translateText(item.requestedChange) }}</strong><small>{{ translateText(item.status) }} - {{ item.approver }}</small></article>
         </section>
       </section>
 
       <section *ngIf="activeView === 'leave'" class="view two-column">
         <section class="panel">
-          <div class="panel-head"><h3>Apply for Leave</h3><span>Calendar dates</span></div>
+          <div class="panel-head"><h3>{{ t('applyLeave') }}</h3><span>{{ t('calendarDates') }}</span></div>
           <form class="compact-form" (ngSubmit)="submitLeave()">
-            <select name="leaveType" [(ngModel)]="leaveForm.leaveType"><option>Casual Leave</option><option>Sick Leave</option><option>Annual Leave</option><option>Work from Home</option><option>Unpaid</option></select>
-            <div class="form-pair"><label>From date <input name="fromDate" type="date" [(ngModel)]="leaveForm.fromDate" /></label><label>To date <input name="toDate" type="date" [(ngModel)]="leaveForm.toDate" /></label></div>
-            <textarea name="leaveReason" placeholder="Reason" [(ngModel)]="leaveForm.reason"></textarea>
-            <input name="leaveContact" placeholder="Contact during leave" [(ngModel)]="leaveForm.contactDuringLeave" />
-            <button type="submit">Submit Leave</button>
+            <select name="leaveType" [(ngModel)]="leaveForm.leaveType"><option value="Casual Leave">{{ translateText('Casual Leave') }}</option><option value="Sick Leave">{{ translateText('Sick Leave') }}</option><option value="Annual Leave">{{ translateText('Annual Leave') }}</option><option value="Work from Home">{{ translateText('Work from Home') }}</option><option value="Unpaid">{{ translateText('Unpaid') }}</option></select>
+            <div class="form-pair"><label>{{ t('fromDate') }} <input name="fromDate" type="date" [(ngModel)]="leaveForm.fromDate" /></label><label>{{ t('toDate') }} <input name="toDate" type="date" [(ngModel)]="leaveForm.toDate" /></label></div>
+            <textarea name="leaveReason" [placeholder]="t('reason')" [(ngModel)]="leaveForm.reason"></textarea>
+            <input name="leaveContact" [placeholder]="t('contactDuringLeave')" [(ngModel)]="leaveForm.contactDuringLeave" />
+            <button type="submit">{{ t('submitLeave') }}</button>
           </form>
         </section>
         <section class="panel">
-          <div class="panel-head"><h3>Leave Balance</h3><span>Available days</span></div>
-          <article *ngFor="let item of leave?.balances" class="balance-row"><div><strong>{{ item.leaveType }}</strong><small>{{ item.availableBalance }} of {{ item.annualEntitlement }} available</small></div><div class="completion"><span>{{ item.availableBalance }}</span><div><i [style.width.%]="(item.availableBalance / item.annualEntitlement) * 100"></i></div></div></article>
+          <div class="panel-head"><h3>{{ t('leaveBalance') }}</h3><span>{{ t('availableDays') }}</span></div>
+          <article *ngFor="let item of leave?.balances" class="balance-row"><div><strong>{{ translateText(item.leaveType) }}</strong><small>{{ item.availableBalance }} of {{ item.annualEntitlement }} {{ t('available') }}</small></div><div class="completion"><span>{{ item.availableBalance }}</span><div><i [style.width.%]="(item.availableBalance / item.annualEntitlement) * 100"></i></div></div></article>
         </section>
         <section class="panel full-span">
-          <div class="panel-head"><h3>Leave Requests</h3><span>Status tracking</span></div>
-          <article *ngFor="let item of leave?.requests" class="approval"><span>{{ item.leaveType }}</span><strong>{{ item.fromDate | date }} to {{ item.toDate | date }}</strong><small>{{ item.totalDays }} day(s) - {{ item.status }}</small></article>
+          <div class="panel-head"><h3>{{ t('leaveRequests') }}</h3><span>{{ t('statusTracking') }}</span></div>
+          <article *ngFor="let item of leave?.requests" class="approval"><span>{{ translateText(item.leaveType) }}</span><strong>{{ item.fromDate | date }} to {{ item.toDate | date }}</strong><small>{{ item.totalDays }} {{ t('daySuffix') }} - {{ translateText(item.status) }}</small></article>
         </section>
       </section>
 
       <section *ngIf="activeView === 'benefits'" class="view">
-        <section class="panel"><div class="panel-head"><h3>Benefits, Mobility and Expense Categories</h3><span>Available sections</span></div><div class="card-grid"><article *ngFor="let item of benefits" class="mini-card"><span>{{ item.category }}</span><strong>{{ item.name }}</strong><p>{{ item.coverage }}</p><p>{{ item.description }}</p><small>{{ item.status }}</small></article></div></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('benefitsTitle') }}</h3><span>{{ t('availableSections') }}</span></div><div class="card-grid"><article *ngFor="let item of benefits" class="mini-card"><span>{{ translateText(item.category) }}</span><strong>{{ translateText(item.name) }}</strong><p>{{ translateText(item.coverage) }}</p><p>{{ translateText(item.description) }}</p><small>{{ translateText(item.status) }}</small></article></div></section>
       </section>
 
       <section *ngIf="activeView === 'expense'" class="view two-column">
-        <section class="panel"><div class="panel-head"><h3>Expense Claim</h3><span>Medical OPD</span></div><form class="compact-form" (ngSubmit)="submitExpense()"><select name="claimType" [(ngModel)]="expenseForm.claimType"><option>Medical Expense OPD</option><option>Business Expense</option></select><select name="expenseCategory" [(ngModel)]="expenseForm.category"><option>Medical OPD</option><option>Business Expense</option></select><div class="form-pair"><input name="expenseDate" type="date" [(ngModel)]="expenseForm.expenseDate" /><input name="amount" type="number" placeholder="Amount" [(ngModel)]="expenseForm.amount" /></div><textarea name="expenseDescription" placeholder="Claim description" [(ngModel)]="expenseForm.description"></textarea><button type="submit">Submit Claim</button></form></section>
-        <section class="panel"><div class="panel-head"><h3>Claim History</h3><span>Line manager routed</span></div><article *ngFor="let item of expenseClaims" class="approval"><span>{{ item.category }}</span><strong>{{ item.claimType }} - {{ item.amount | currency }}</strong><small>{{ item.status }} - {{ item.lineManager }}</small></article></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('expenseClaim') }}</h3><span>{{ t('medicalOpd') }}</span></div><form class="compact-form" (ngSubmit)="submitExpense()"><select name="claimType" [(ngModel)]="expenseForm.claimType"><option value="Medical Expense OPD">{{ translateText('Medical Expense OPD') }}</option><option value="Business Expense">{{ translateText('Business Expense') }}</option></select><select name="expenseCategory" [(ngModel)]="expenseForm.category"><option value="Medical OPD">{{ translateText('Medical OPD') }}</option><option value="Business Expense">{{ translateText('Business Expense') }}</option></select><div class="form-pair"><input name="expenseDate" type="date" [(ngModel)]="expenseForm.expenseDate" /><input name="amount" type="number" [placeholder]="t('amount')" [(ngModel)]="expenseForm.amount" /></div><textarea name="expenseDescription" [placeholder]="t('claimDescription')" [(ngModel)]="expenseForm.description"></textarea><button type="submit">{{ t('submitClaim') }}</button></form></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('claimHistory') }}</h3><span>{{ t('lineManagerRouted') }}</span></div><article *ngFor="let item of expenseClaims" class="approval"><span>{{ translateText(item.category) }}</span><strong>{{ translateText(item.claimType) }} - {{ item.amount | currency }}</strong><small>{{ translateText(item.status) }} - {{ item.lineManager }}</small></article></section>
       </section>
 
       <section *ngIf="activeView === 'resignation'" class="view two-column">
-        <section class="panel"><div class="panel-head"><h3>Resignation Request</h3><span>Offboarding</span></div><form class="compact-form" (ngSubmit)="submitResignation()"><input name="lastWorkingDate" type="date" [(ngModel)]="resignationForm.lastWorkingDate" /><textarea name="resignationReason" placeholder="Reason" [(ngModel)]="resignationForm.reason"></textarea><button type="submit">Submit Resignation</button></form></section>
-        <section class="panel"><div class="panel-head"><h3>Resignation History</h3><span>Clearance workflow</span></div><article *ngFor="let item of resignations" class="approval"><span>{{ item.status }}</span><strong>Last working day {{ item.lastWorkingDate | date }}</strong><small>{{ item.reason }} - {{ item.lineManager }}</small></article></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('resignationRequest') }}</h3><span>{{ t('offboarding') }}</span></div><form class="compact-form" (ngSubmit)="submitResignation()"><input name="lastWorkingDate" type="date" [(ngModel)]="resignationForm.lastWorkingDate" /><textarea name="resignationReason" [placeholder]="t('reason')" [(ngModel)]="resignationForm.reason"></textarea><button type="submit">{{ t('submitResignation') }}</button></form></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('resignationHistory') }}</h3><span>{{ t('clearanceWorkflow') }}</span></div><article *ngFor="let item of resignations" class="approval"><span>{{ translateText(item.status) }}</span><strong>{{ t('lastWorkingDay') }} {{ item.lastWorkingDate | date }}</strong><small>{{ translateText(item.reason) }} - {{ item.lineManager }}</small></article></section>
       </section>
 
       <section *ngIf="activeView === 'profile'" class="view two-column">
-        <section class="panel"><div class="panel-head"><h3>Profile Management</h3><span>Language and picture</span></div><form class="compact-form" (ngSubmit)="updateProfile()"><select name="language" [(ngModel)]="selectedLanguage"><option>English</option><option>Urdu</option><option>Arabic</option><option>French</option></select><input name="profileImageUrl" placeholder="Profile image URL" [(ngModel)]="profileImageUrl" /><button type="submit">Update Profile</button></form></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('profileManagement') }}</h3><span>{{ t('languageAndPicture') }}</span></div><form class="compact-form" (ngSubmit)="updateProfile()"><label>{{ t('language') }}<select name="language" [(ngModel)]="selectedLanguage"><option>English</option><option>Urdu</option><option>Arabic</option><option>French</option></select></label><input name="profileImageUrl" [placeholder]="t('profileImageUrl')" [(ngModel)]="profileImageUrl" /><button type="submit">{{ t('updateProfile') }}</button></form></section>
         <section class="panel"><div class="profile-preview"><img *ngIf="session.employee.profileImageUrl" [src]="session.employee.profileImageUrl" alt="Profile preview" /><strong>{{ session.employee.fullName }}</strong><span>{{ session.employee.preferredLanguage }}</span></div></section>
       </section>
 
       <section *ngIf="activeView === 'policies'" class="view">
-        <section class="panel"><div class="panel-head"><h3>Policies and Downloads</h3><span>Knowledge base</span></div><table><thead><tr><th>Policy</th><th>Category</th><th>Version</th><th>Published</th></tr></thead><tbody><tr *ngFor="let item of policies"><td>{{ item.title }}</td><td>{{ item.category }}</td><td>{{ item.version }}</td><td>{{ item.publishedOn | date }}</td></tr></tbody></table></section>
+        <section class="panel"><div class="panel-head"><h3>{{ t('policiesDownloads') }}</h3><span>{{ t('knowledgeBase') }}</span></div><table><thead><tr><th>{{ t('policy') }}</th><th>{{ t('category') }}</th><th>{{ t('version') }}</th><th>{{ t('published') }}</th></tr></thead><tbody><tr *ngFor="let item of policies"><td>{{ translateText(item.title) }}</td><td>{{ translateText(item.category) }}</td><td>{{ item.version }}</td><td>{{ item.publishedOn | date }}</td></tr></tbody></table></section>
       </section>
     </section>
   </ng-container>
