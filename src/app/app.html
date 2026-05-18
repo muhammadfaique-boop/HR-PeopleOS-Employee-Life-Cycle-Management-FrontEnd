@@ -1,6 +1,7 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
-<main class="shell" [class.is-locked]="!session" [class.rtl]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic'" [attr.dir]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic' ? 'rtl' : 'ltr'">
+<router-outlet></router-outlet>
+<main *ngIf="!routedPageOpen" class="shell" [class.is-locked]="!session" [class.rtl]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic'" [attr.dir]="selectedLanguage === 'Urdu' || selectedLanguage === 'Arabic' ? 'rtl' : 'ltr'">
   <app-login-page *ngIf="!session" (sessionReady)="handleSessionReady($event)"></app-login-page>
 
   <section *ngIf="session && !dashboard" class="workspace-splash">
@@ -37,18 +38,16 @@
               <span class="bell-icon">!</span>
               <i *ngIf="unreadNotifications">{{ unreadNotifications }}</i>
             </button>
-            <div class="notification-menu" *ngIf="notificationsOpen">
-              <div class="notification-head"><strong>{{ t('notifications') }}</strong><button type="button" (click)="markNotificationsRead()">{{ t('markRead') }}</button></div>
-              <article *ngFor="let note of notifications" [class]="note.tone">
-                <span>{{ note.title }}</span>
-                <p>{{ note.body }}</p>
-                <div class="approval-actions compact" *ngIf="canDecideNotificationApproval(note)">
-                  <button type="button" class="approve" [disabled]="isNotificationApprovalBusy(note)" (click)="decideNotificationApproval(note, 'Approved')">{{ t('approve') }}</button>
-                  <button type="button" class="reject" [disabled]="isNotificationApprovalBusy(note)" (click)="decideNotificationApproval(note, 'Rejected')">{{ t('reject') }}</button>
-                </div>
-              </article>
-              <p class="empty-state" *ngIf="!notifications.length">{{ t('noNotifications') }}</p>
-            </div>
+            <app-notification-menu
+              *ngIf="notificationsOpen"
+              [notifications]="notifications"
+              [approvalBusyId]="approvalBusyId"
+              [labels]="notificationMenuLabels"
+              (markRead)="markNotificationsRead()"
+              (viewAll)="viewAllNotifications()"
+              (clearNotification)="clearNotification($event)"
+              (decideApproval)="handleNotificationDecision($event)"
+            ></app-notification-menu>
           </div>
           <div class="profile-menu-wrap">
             <button type="button" class="profile-trigger" (click)="toggleProfileMenu()">

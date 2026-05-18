@@ -6,6 +6,7 @@ import { filter, finalize } from 'rxjs';
 import { FileReaderService } from './core/services/file-reader.service';
 import { LoginPageComponent } from './features/auth/pages/login-page/login-page.component';
 import { NotificationDecisionEvent, NotificationMenuComponent } from './features/notifications/components/notification-menu/notification-menu.component';
+import { NotificationDismissalService } from './features/notifications/services/notification-dismissal.service';
 import { PeopleOsFacade } from './features/peopleos/store/peopleos-facade.service';
 import { AppPasswordField } from './shared/components/ui/app-password-field/app-password-field.component';
 import { PRIMENG_UI_IMPORTS } from './shared/components/ui/primeng-ui.imports';
@@ -44,6 +45,7 @@ export class App implements OnDestroy {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly notificationDismissals = inject(NotificationDismissalService);
   private readonly inactivityLimitMs = 20 * 60 * 1000;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private messageTimer: ReturnType<typeof setTimeout> | null = null;
@@ -67,7 +69,7 @@ export class App implements OnDestroy {
   message = '';
   notificationsOpen = false;
   readNotificationKeys = new Set<string>();
-  dismissedNotificationKeys = new Set<string>();
+  dismissedNotificationKeys = this.notificationDismissals.getDismissedKeys();
   routedPageOpen = false;
   profileMenuOpen = false;
   passwordPanelOpen = false;
@@ -211,7 +213,7 @@ export class App implements OnDestroy {
     this.passwordPanelOpen = false;
     this.notificationsOpen = false;
     this.readNotificationKeys.clear();
-    this.dismissedNotificationKeys.clear();
+    this.dismissedNotificationKeys = this.notificationDismissals.getDismissedKeys();
     this.validationErrors = {};
     this.clearMessage();
     this.resetSessionDrafts();
@@ -276,7 +278,7 @@ export class App implements OnDestroy {
       this.peopleOs.clearNotification(employeeId, note.employeeNotificationId).subscribe({
         next: () => {
           this.employeeNotifications = this.employeeNotifications.filter(item => item.id !== note.employeeNotificationId);
-          this.dismissedNotificationKeys.add(note.key);
+          this.dismissedNotificationKeys = this.notificationDismissals.dismiss(note.key);
         },
         error: () => {
           this.showMessage(this.t('notificationClearFailed'));
@@ -285,7 +287,7 @@ export class App implements OnDestroy {
       return;
     }
 
-    this.dismissedNotificationKeys.add(note.key);
+    this.dismissedNotificationKeys = this.notificationDismissals.dismiss(note.key);
     this.readNotificationKeys.add(note.key);
   }
 
@@ -926,12 +928,15 @@ const translations = {
     notifications: 'Notifications',
     noNotifications: 'No notifications',
     markRead: 'Mark read',
+    viewAllNotifications: 'View all',
+    clearNotification: 'Clear notification',
     approvalRequired: 'Approval required',
     approve: 'Approve',
     reject: 'Reject',
     approvalApproved: 'Approval approved.',
     approvalRejected: 'Approval rejected.',
     approvalFailed: 'Could not update approval. Please try again.',
+    notificationClearFailed: 'Could not clear notification. Please try again.',
     recentActivity: 'Recent activity',
     hrHub: 'HR Hub',
     quickActions: 'Quick Actions',

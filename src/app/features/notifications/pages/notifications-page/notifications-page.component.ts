@@ -11,6 +11,7 @@ import {
   NotificationItem,
   NotificationTone
 } from '../../../../shared/models/peopleos.models';
+import { NotificationDismissalService } from '../../services/notification-dismissal.service';
 
 interface NotificationCenterRow extends NotificationItem {
   source: string;
@@ -28,7 +29,8 @@ export class NotificationsPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly notificationsApi = inject(NotificationsApiService);
-  private readonly dismissedKeys = new Set<string>();
+  private readonly dismissals = inject(NotificationDismissalService);
+  private dismissedKeys = this.dismissals.getDismissedKeys();
 
   employeeId = 2;
   loading = false;
@@ -98,7 +100,7 @@ export class NotificationsPageComponent implements OnInit {
   }
 
   private removeNotification(key: string) {
-    this.dismissedKeys.add(key);
+    this.dismissedKeys = this.dismissals.dismiss(key);
     this.notifications = this.notifications.filter(note => note.key !== key);
   }
 
