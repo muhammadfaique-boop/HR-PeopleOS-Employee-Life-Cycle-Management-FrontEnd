@@ -105,6 +105,10 @@ export class PeopleOsFacade {
     return this.notificationsApi.markAllRead(employeeId);
   }
 
+  clearNotification(employeeId: number, notificationId: number): Observable<void> {
+    return this.notificationsApi.clearNotification(employeeId, notificationId);
+  }
+
   updateProfile(employeeId: number, request: ProfileUpdateRequestDto) {
     return this.peopleApi.updateProfile(employeeId, request);
   }

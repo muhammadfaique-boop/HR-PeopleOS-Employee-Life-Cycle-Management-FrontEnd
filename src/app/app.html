@@ -213,8 +213,36 @@
       </section>
 
       <section *ngIf="activeView === 'profile'" class="view two-column">
-        <section class="panel"><div class="panel-head"><h3>{{ t('profileManagement') }}</h3><span>{{ t('languageAndPicture') }}</span></div><form class="compact-form" [formGroup]="profileForm" (ngSubmit)="updateProfile()"><app-form-field [label]="t('language')" [error]="fieldError('language')"><p-select formControlName="preferredLanguage" required [options]="languageOptions"></p-select></app-form-field><input pInputText formControlName="profileImageUrl" [placeholder]="t('profileImageUrl')" /><button pButton type="submit" [disabled]="isBusy('profile')"><span *ngIf="isBusy('profile')" class="button-spinner"></span>{{ isBusy('profile') ? t('saving') : t('updateProfile') }}</button></form></section>
-        <section class="panel"><div class="profile-preview"><img *ngIf="session.employee.profileImageUrl" [src]="session.employee.profileImageUrl" alt="Profile preview" /><strong>{{ session.employee.fullName }}</strong><span>{{ session.employee.preferredLanguage }}</span></div></section>
+        <section class="panel">
+          <div class="panel-head"><h3>{{ t('profileManagement') }}</h3><span>{{ canManageEmployeeIdentity ? t('identityAndAddress') : t('languageAndPicture') }}</span></div>
+          <form class="compact-form" [formGroup]="profileForm" (ngSubmit)="updateProfile()">
+            <app-form-field [label]="t('language')" [error]="fieldError('language')"><p-select formControlName="preferredLanguage" required [options]="languageOptions"></p-select></app-form-field>
+            <input pInputText formControlName="profileImageUrl" [placeholder]="t('profileImageUrl')" />
+            <ng-container *ngIf="canManageEmployeeIdentity">
+              <div class="form-pair">
+                <app-form-field [label]="t('firstName')" [error]="fieldError('firstName')"><input pInputText formControlName="firstName" required /></app-form-field>
+                <app-form-field [label]="t('lastName')" [error]="fieldError('lastName')"><input pInputText formControlName="lastName" required /></app-form-field>
+              </div>
+              <div class="form-pair">
+                <app-form-field [label]="t('profileEmail')" [error]="fieldError('profileEmail')"><input pInputText formControlName="email" type="email" required /></app-form-field>
+                <app-form-field [label]="t('phone')"><input pInputText formControlName="phone" /></app-form-field>
+              </div>
+              <app-form-field [label]="t('contactNumber')"><input pInputText formControlName="contactNumber" /></app-form-field>
+              <app-form-field [label]="t('addressLine1')"><input pInputText formControlName="addressLine1" /></app-form-field>
+              <app-form-field [label]="t('addressLine2')"><input pInputText formControlName="addressLine2" /></app-form-field>
+              <div class="form-pair">
+                <app-form-field [label]="t('city')"><input pInputText formControlName="city" /></app-form-field>
+                <app-form-field [label]="t('state')"><input pInputText formControlName="state" /></app-form-field>
+              </div>
+              <div class="form-pair">
+                <app-form-field [label]="t('postalCode')"><input pInputText formControlName="postalCode" /></app-form-field>
+                <app-form-field [label]="t('country')"><input pInputText formControlName="country" /></app-form-field>
+              </div>
+            </ng-container>
+            <button pButton type="submit" [disabled]="isBusy('profile')"><span *ngIf="isBusy('profile')" class="button-spinner"></span>{{ isBusy('profile') ? t('saving') : t('updateProfile') }}</button>
+          </form>
+        </section>
+        <section class="panel"><div class="profile-preview"><img *ngIf="session.employee.profileImageUrl" [src]="session.employee.profileImageUrl" alt="Profile preview" /><strong>{{ session.employee.fullName }}</strong><span>{{ session.employee.email }}</span><span>{{ session.employee.preferredLanguage }}</span><small *ngIf="session.employee.phone || session.employee.contactNumber">{{ session.employee.phone || session.employee.contactNumber }}</small><small *ngIf="session.employee.addressLine1">{{ session.employee.addressLine1 }}, {{ session.employee.city }}</small></div></section>
       </section>
 
       <section *ngIf="activeView === 'policies'" class="view">

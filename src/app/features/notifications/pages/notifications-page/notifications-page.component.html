@@ -1,0 +1,62 @@
+<section class="notification-center">
+  <header class="notification-center-head">
+    <button pButton type="button" class="back-button" (click)="goBack()">
+      <i class="pi pi-arrow-left"></i>
+      Dashboard
+    </button>
+    <div>
+      <p>Employee center</p>
+      <h1>All Notifications</h1>
+    </div>
+    <button pButton type="button" class="mark-read-button" (click)="markAllRead()">Mark read</button>
+  </header>
+
+  <p class="message" *ngIf="message">{{ message }}</p>
+
+  <p-card>
+    <p-table
+      [value]="notifications"
+      [loading]="loading"
+      [rowTrackBy]="trackByKey"
+      responsiveLayout="scroll"
+      [tableStyle]="{ 'min-width': '760px' }"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Status</th>
+          <th>Notification</th>
+          <th>Source</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-note>
+        <tr>
+          <td><span class="status-pill" [class.unread]="!note.isRead">{{ note.isRead ? 'Read' : 'Unread' }}</span></td>
+          <td>
+            <strong [class.urgent]="note.tone === 'urgent'">{{ note.title }}</strong>
+            <p>{{ note.body }}</p>
+          </td>
+          <td>{{ note.source }}</td>
+          <td>{{ note.createdAt ? (note.createdAt | date: 'medium') : '-' }}</td>
+          <td>
+            <button
+              pButton
+              type="button"
+              class="clear-row-button"
+              [attr.aria-label]="'Clear notification'"
+              (click)="clearNotification(note)"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5">No notifications available.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</section>

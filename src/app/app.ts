@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, ViewChild, inject } from '@angular/core';
 import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, finalize } from 'rxjs';
 import { FileReaderService } from './core/services/file-reader.service';
 import { LoginPageComponent } from './features/auth/pages/login-page/login-page.component';
+import { NotificationDecisionEvent, NotificationMenuComponent } from './features/notifications/components/notification-menu/notification-menu.component';
 import { PeopleOsFacade } from './features/peopleos/store/peopleos-facade.service';
 import { AppPasswordField } from './shared/components/ui/app-password-field/app-password-field.component';
 import { PRIMENG_UI_IMPORTS } from './shared/components/ui/primeng-ui.imports';
@@ -30,7 +32,7 @@ import {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, ReactiveFormsModule, LoginPageComponent, AppPasswordField, ...PRIMENG_UI_IMPORTS],
+  imports: [CommonModule, ReactiveFormsModule, RouterOutlet, LoginPageComponent, AppPasswordField, NotificationMenuComponent, ...PRIMENG_UI_IMPORTS],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -41,6 +43,7 @@ export class App implements OnDestroy {
   private readonly fileReader = inject(FileReaderService);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
   private readonly inactivityLimitMs = 20 * 60 * 1000;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private messageTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,6 +67,8 @@ export class App implements OnDestroy {
   message = '';
   notificationsOpen = false;
   readNotificationKeys = new Set<string>();
+  dismissedNotificationKeys = new Set<string>();
+  routedPageOpen = false;
   profileMenuOpen = false;
   passwordPanelOpen = false;
   leaveFormVisible = true;
@@ -105,7 +110,18 @@ export class App implements OnDestroy {
   });
   readonly profileForm = this.fb.group({
     preferredLanguage: ['English' as SupportedLanguage, Validators.required],
-    profileImageUrl: ['']
+    profileImageUrl: [''],
+    firstName: [''],
+    lastName: [''],
+    email: ['', Validators.email],
+    phone: [''],
+    contactNumber: [''],
+    addressLine1: [''],
+    addressLine2: [''],
+    city: [''],
+    state: [''],
+    postalCode: [''],
+    country: ['']
   });
   private readonly viewPermissions: Record<ViewKey, PermissionKey> = {
     overview: 'attendance.read',
@@ -123,8 +139,34 @@ export class App implements OnDestroy {
   readonly expenseCategoryOptions = ['Medical OPD', 'Business Expense'].map(value => ({ label: value, value }));
   readonly languageOptions: SupportedLanguage[] = ['English', 'Urdu', 'Arabic', 'French'];
 
+  constructor() {
+    this.routedPageOpen = this.router.url.startsWith('/notifications');
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(event => {
+        this.routedPageOpen = event.urlAfterRedirects.startsWith('/notifications');
+      });
+  }
+
   get selectedLanguage(): SupportedLanguage {
     return this.profileForm.controls.preferredLanguage.value as SupportedLanguage;
+  }
+
+  get notificationMenuLabels() {
+    return {
+      title: this.t('notifications'),
+      markRead: this.t('markRead'),
+      viewAll: this.t('viewAllNotifications'),
+      empty: this.t('noNotifications'),
+      clear: this.t('clearNotification'),
+      approve: this.t('approve'),
+      reject: this.t('reject')
+    };
+  }
+
+  get canManageEmployeeIdentity(): boolean {
+    const role = this.session?.role.toLowerCase() ?? '';
+    return role.includes('super admin') || role.includes('superadmin') || this.hasPermission('role.manage');
   }
 
   @HostListener('document:mousemove')
@@ -169,6 +211,7 @@ export class App implements OnDestroy {
     this.passwordPanelOpen = false;
     this.notificationsOpen = false;
     this.readNotificationKeys.clear();
+    this.dismissedNotificationKeys.clear();
     this.validationErrors = {};
     this.clearMessage();
     this.resetSessionDrafts();
@@ -218,6 +261,32 @@ export class App implements OnDestroy {
       this.peopleOs.markNotificationsRead(employeeId).subscribe();
     }
     this.notificationsOpen = false;
+  }
+
+  viewAllNotifications() {
+    this.notificationsOpen = false;
+    this.router.navigate(['/notifications'], {
+      queryParams: { employeeId: this.session?.employee.id ?? 2 }
+    });
+  }
+
+  clearNotification(note: NotificationItem) {
+    const employeeId = this.session?.employee.id;
+    if (note.employeeNotificationId && employeeId) {
+      this.peopleOs.clearNotification(employeeId, note.employeeNotificationId).subscribe({
+        next: () => {
+          this.employeeNotifications = this.employeeNotifications.filter(item => item.id !== note.employeeNotificationId);
+          this.dismissedNotificationKeys.add(note.key);
+        },
+        error: () => {
+          this.showMessage(this.t('notificationClearFailed'));
+        }
+      });
+      return;
+    }
+
+    this.dismissedNotificationKeys.add(note.key);
+    this.readNotificationKeys.add(note.key);
   }
 
   toggleProfileMenu() {
@@ -328,7 +397,8 @@ export class App implements OnDestroy {
       title: this.t('approvalRequired'),
       body: `${this.translateText(item.subject)} - ${this.translateText(item.status)}`,
       tone: 'urgent' as NotificationTone,
-      approvalId: item.id
+      approvalId: item.id,
+      canDecideApproval: this.canDecideApproval(item)
     }));
 
     const activity = this.dashboard.recentActivity.map((item, index) => ({
@@ -339,7 +409,9 @@ export class App implements OnDestroy {
       isRead: true
     }));
 
-    return [...employeeNotifications, ...approvals, ...activity].slice(0, 10);
+    return [...employeeNotifications, ...approvals, ...activity]
+      .filter(note => !this.dismissedNotificationKeys.has(note.key))
+      .slice(0, 10);
   }
 
   get unreadNotifications() {
@@ -373,6 +445,10 @@ export class App implements OnDestroy {
     }
 
     this.decideApproval(item, decision);
+  }
+
+  handleNotificationDecision(event: NotificationDecisionEvent) {
+    this.decideNotificationApproval(event.note, event.decision);
   }
 
   canDecideApproval(item: ApprovalTask): boolean {
@@ -505,22 +581,45 @@ export class App implements OnDestroy {
 
     this.validationErrors = {};
     const profileForm = this.profileForm.getRawValue();
-    if (!this.requireFields([
+    const requiredProfileFields: Array<[string, string | number | null | undefined]> = [
       ['language', profileForm.preferredLanguage]
-    ])) {
+    ];
+
+    if (this.canManageEmployeeIdentity) {
+      requiredProfileFields.push(
+        ['firstName', profileForm.firstName],
+        ['lastName', profileForm.lastName],
+        ['profileEmail', profileForm.email]
+      );
+    }
+
+    if (!this.requireFields(requiredProfileFields)) {
       return;
     }
 
+    const firstName = profileForm.firstName.trim();
+    const lastName = profileForm.lastName.trim();
     this.formBusy = 'profile';
     this.peopleOs.updateProfile(this.session.employee.id, {
       preferredLanguage: profileForm.preferredLanguage,
-      profileImageUrl: profileForm.profileImageUrl
+      profileImageUrl: profileForm.profileImageUrl,
+      ...(this.canManageEmployeeIdentity ? {
+        firstName,
+        lastName,
+        fullName: `${firstName} ${lastName}`.trim(),
+        email: profileForm.email.trim(),
+        phone: profileForm.phone.trim(),
+        contactNumber: profileForm.contactNumber.trim(),
+        addressLine1: profileForm.addressLine1.trim(),
+        addressLine2: profileForm.addressLine2.trim(),
+        city: profileForm.city.trim(),
+        state: profileForm.state.trim(),
+        postalCode: profileForm.postalCode.trim(),
+        country: profileForm.country.trim()
+      } : {})
     }).pipe(finalize(() => this.formBusy = '')).subscribe(employee => {
       this.session = { ...this.session!, employee };
-      this.profileForm.patchValue({
-        preferredLanguage: this.toSupportedLanguage(employee.preferredLanguage),
-        profileImageUrl: employee.profileImageUrl || ''
-      });
+      this.patchProfileForm(employee);
       this.showMessage(this.t('profileUpdated'));
       this.profileMenuOpen = false;
     });
@@ -635,10 +734,36 @@ export class App implements OnDestroy {
     this.resetCorrectionForm(employeeId);
     this.resetExpenseForm(employeeId);
     this.resetResignationForm(employeeId);
+    this.patchProfileForm(session?.employee);
+  }
+
+  private patchProfileForm(employee: Session['employee'] | undefined) {
+    const nameParts = this.splitEmployeeName(employee);
+
     this.profileForm.reset({
-      preferredLanguage: this.toSupportedLanguage(session?.employee.preferredLanguage),
-      profileImageUrl: session?.employee.profileImageUrl || ''
+      preferredLanguage: this.toSupportedLanguage(employee?.preferredLanguage),
+      profileImageUrl: employee?.profileImageUrl || '',
+      firstName: employee?.firstName || nameParts.firstName,
+      lastName: employee?.lastName || nameParts.lastName,
+      email: employee?.email || '',
+      phone: employee?.phone || '',
+      contactNumber: employee?.contactNumber || '',
+      addressLine1: employee?.addressLine1 || '',
+      addressLine2: employee?.addressLine2 || '',
+      city: employee?.city || '',
+      state: employee?.state || '',
+      postalCode: employee?.postalCode || '',
+      country: employee?.country || ''
     });
+  }
+
+  private splitEmployeeName(employee: Session['employee'] | undefined) {
+    const [firstName = '', ...rest] = (employee?.fullName || '').trim().split(/\s+/).filter(Boolean);
+
+    return {
+      firstName,
+      lastName: rest.join(' ')
+    };
   }
 
   private resetLeaveForm(employeeId = this.session?.employee.id ?? 2, refreshControls = false) {
@@ -869,8 +994,20 @@ const translations = {
     lastWorkingDay: 'Last working day',
     profileManagement: 'Profile Management',
     languageAndPicture: 'Language and picture',
+    identityAndAddress: 'Identity and address',
     language: 'Language',
     profileImageUrl: 'Profile image URL',
+    firstName: 'First name',
+    lastName: 'Last name',
+    profileEmail: 'Email',
+    phone: 'Phone',
+    contactNumber: 'Contact number',
+    addressLine1: 'Address line 1',
+    addressLine2: 'Address line 2',
+    city: 'City',
+    state: 'State / province',
+    postalCode: 'Postal code',
+    country: 'Country',
     updateProfile: 'Update Profile',
     uploadImage: 'Upload Image',
     changePassword: 'Change Password',

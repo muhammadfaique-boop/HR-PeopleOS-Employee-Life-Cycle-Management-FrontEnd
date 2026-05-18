@@ -19,4 +19,10 @@ export class NotificationsApiService {
       params: { employeeId }
     });
   }
+
+  clearNotification(employeeId: number, notificationId: number): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/peopleos/notifications/${notificationId}`, {
+      params: { employeeId }
+    });
+  }
 }

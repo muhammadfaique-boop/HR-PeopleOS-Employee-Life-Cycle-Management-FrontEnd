@@ -1,0 +1,42 @@
+<div class="notification-menu">
+  <div class="notification-head">
+    <strong>{{ labels.title }}</strong>
+    <div class="notification-head-actions">
+      <button type="button" (click)="markRead.emit()">{{ labels.markRead }}</button>
+      <button type="button" (click)="viewAll.emit()">{{ labels.viewAll }}</button>
+    </div>
+  </div>
+
+  <article *ngFor="let note of notifications" [class]="note.tone">
+    <button
+      type="button"
+      class="clear-notification"
+      [attr.aria-label]="labels.clear"
+      (click)="clearNotification.emit(note)"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+    <span>{{ note.title }}</span>
+    <p>{{ note.body }}</p>
+    <div class="approval-actions compact" *ngIf="note.canDecideApproval">
+      <button
+        type="button"
+        class="approve"
+        [disabled]="isApprovalBusy(note)"
+        (click)="decideApproval.emit({ note, decision: 'Approved' })"
+      >
+        {{ labels.approve }}
+      </button>
+      <button
+        type="button"
+        class="reject"
+        [disabled]="isApprovalBusy(note)"
+        (click)="decideApproval.emit({ note, decision: 'Rejected' })"
+      >
+        {{ labels.reject }}
+      </button>
+    </div>
+  </article>
+
+  <p class="empty-state" *ngIf="!notifications.length">{{ labels.empty }}</p>
+</div>

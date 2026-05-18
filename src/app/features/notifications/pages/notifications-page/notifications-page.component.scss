@@ -1,0 +1,130 @@
+.notification-center {
+  min-height: 100vh;
+  padding: 32px;
+  background: #f7f1e8;
+  color: #05100d;
+}
+
+.notification-center-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.notification-center-head p {
+  margin: 0 0 4px;
+  color: #d86f45;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.notification-center-head h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.back-button,
+.mark-read-button,
+.clear-row-button {
+  border: 0;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.back-button,
+.mark-read-button {
+  background: #17211d;
+  color: #fff;
+  padding: 12px 16px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message {
+  border: 1px solid #c3dfd5;
+  background: #eaf7f3;
+  color: #00645f;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+:host ::ng-deep .p-card {
+  border: 1px solid #e1d7c9;
+  border-radius: 8px;
+  box-shadow: none;
+  background: #fffaf2;
+}
+
+:host ::ng-deep .p-datatable-thead > tr > th {
+  background: #fff3d2;
+  color: #17211d;
+  font-weight: 900;
+}
+
+:host ::ng-deep .p-datatable-tbody > tr > td {
+  vertical-align: top;
+}
+
+td p {
+  margin: 4px 0 0;
+  color: #2e3a35;
+}
+
+strong.urgent {
+  color: #d86f45;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #e8f3ef;
+  color: #00645f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.status-pill.unread {
+  background: #fff0ea;
+  color: #b85c3b;
+}
+
+.clear-row-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: #fff0ea;
+  color: #b85c3b;
+  cursor: pointer;
+}
+
+.clear-row-button:hover {
+  color: #fff;
+  background: #d86f45;
+}
+
+@media (max-width: 720px) {
+  .notification-center {
+    padding: 18px;
+  }
+
+  .notification-center-head {
+    grid-template-columns: 1fr;
+  }
+
+  .back-button,
+  .mark-read-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
