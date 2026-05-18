@@ -7,6 +7,6 @@ export * from '../../features/dashboard/dashboard.models';
 export * from '../../features/expense/expense.models';
 export * from '../../features/leave/leave.models';
 export * from '../../features/notifications/notification.models';
-export * from '../../features/people/people.models';
+export * from '../../features/people/people-model/people.models';
 export * from '../../features/policies/policies.models';
 export * from '../../features/resignation/resignation.models';

@@ -3,8 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../core/config/api.config';
 import { Session } from '../../shared/models/peopleos.models';
-import { ChangePasswordRequestDto } from '../../features/auth/change-password-request.dto';
-import { LoginRequestDto } from '../../features/auth/login-request.dto';
+import { ChangePasswordRequestDto } from '../../features/auth/change-password-model/change-password-request.dto';
+import { LoginRequestDto } from '../../features/auth/login-model/login-request.dto';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
